@@ -7,7 +7,7 @@ def create_order(api_key, gateway, value):
         "value": value,
         "currency": "USD",
         "quantity": 1,
-        "email": "",
+        "email": "Y4OilG@pings.email",
         "gateway": gateway,
         "white_label": True,
         "confirmations" : 2

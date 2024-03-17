@@ -2,7 +2,7 @@ import json
 from telegram import InlineKeyboardButton,InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, ConversationHandler
 from deposit_module.order_databasehandler import orderManager
-from balance_dbhandler import balanceManager
+from deposit_module.balance_dbhandler import balanceManager
 from deposit_module.create_order import create_order
 from deposit_module.conf_check import check_order_status
 from deposit_module.delete_order import delete_sellix_order
@@ -154,7 +154,10 @@ def main() -> None:
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_btc, pattern='^btc$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_ltc, pattern='^ltc$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_eth, pattern='^eth$'))
-    #updater.dispatcher.add_handler(CallbackQueryHandler(,pattern='^$'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_deposit, pattern='^(btc|ltc|eth)_deposit_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm,pattern='^cncl_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm_yes,pattern='^cncl_y_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm_no,pattern='^cncl_n_'))
     updater.start_polling()
     print("Polling...")
     updater.idle()

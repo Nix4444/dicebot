@@ -19,19 +19,21 @@ class orderManager:
                 status TEXT,
                 crypto TEXT,
                 amount INTEGER,
-                hash TEXT
+                hash TEXT,
+                coin_amount REAL,
+                address TEXT
             )
         ''')
         conn.commit()
         conn.close()
 
-    def insert_order(self, user_id, username, uniqid, status, crypto, usdvalue,hash):
+    def insert_order(self, user_id, username, uniqid, status, crypto, usdvalue, hash, amount, address):
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO orders (user_id, username, uniqid, status, crypto, amount, plan, hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ? ,?)
-        ''', (user_id, username, uniqid, status, crypto,usdvalue, hash))
+            INSERT INTO orders (user_id, username, uniqid, status, crypto, amount, hash, coin_amount, address)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, username, uniqid, status, crypto, amount, hash, usdvalue, address))
         conn.commit()
         conn.close()
 
@@ -68,4 +70,21 @@ class orderManager:
         ''', (crypto_hash, uniqid))
         conn.commit()
         conn.close()
-#a
+
+    def get_order_by_uniqid(self, uniqid):
+        conn = self._connect()
+        cursor = conn.cursor()
+
+        # Execute the query to fetch data for the given uniqid
+        cursor.execute('''
+            SELECT crypto, coin_amount, address
+            FROM orders
+            WHERE uniqid = ?
+        ''', (uniqid,))
+
+        # Fetch the row from the result set
+        order_data = cursor.fetchone()
+
+        conn.close()
+
+        return order_data
