@@ -33,7 +33,7 @@ class orderManager:
         cursor.execute('''
             INSERT INTO orders (user_id, username, uniqid, status, crypto, amount, hash, coin_amount, address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, username, uniqid, status, crypto, amount, hash, usdvalue, address))
+        ''', (user_id, username, uniqid, status, crypto, usdvalue, hash,amount , address))
         conn.commit()
         conn.close()
 
@@ -53,7 +53,7 @@ class orderManager:
         status = cursor.fetchone()
         conn.close()
         return status[0] if status else None
-    
+
     def get_order_details(self, uniqid):
         conn = self._connect()
         cursor = conn.cursor()

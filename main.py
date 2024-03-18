@@ -80,10 +80,6 @@ def confirmation_update_job(context: CallbackContext):
     username = job_context.get('username')
     amount = job_context.get('amount')
 
-    if not chat_id or not uniqid:
-        logging.error("Chat ID or Uniqid missing from the job context.")
-        return
-
     now = datetime.now()
 
     first_check_time = job_context.get('first_check_time', now)
@@ -155,9 +151,9 @@ def main() -> None:
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_ltc, pattern='^ltc$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_eth, pattern='^eth$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_deposit, pattern='^(btc|ltc|eth)_deposit_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm,pattern='^cncl_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm_yes,pattern='^cncl_y_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(cancelconfirm_no,pattern='^cncl_n_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_cancel_confirmation,pattern='^cncl_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_decline_cancel,pattern='^decline_cancel_'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_confirm_cancel,pattern='^confirm_cancel_'))
     updater.start_polling()
     print("Polling...")
     updater.idle()
