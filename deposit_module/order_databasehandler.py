@@ -77,7 +77,7 @@ class orderManager:
 
         # Execute the query to fetch data for the given uniqid
         cursor.execute('''
-            SELECT crypto, coin_amount, address
+            SELECT crypto, coin_amount, address, amount
             FROM orders
             WHERE uniqid = ?
         ''', (uniqid,))

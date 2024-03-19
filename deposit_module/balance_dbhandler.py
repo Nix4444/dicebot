@@ -50,12 +50,12 @@ class balanceManager:
         conn = self._connect()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM balances WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT amount FROM balances WHERE user_id = ?", (user_id,))
         existing_user = cursor.fetchone()
 
         if existing_user:
             # Update user's balance by adding the amount
-            new_balance = existing_user[3] + amount
+            new_balance = existing_user[0] + amount
             cursor.execute("UPDATE balances SET amount = ? WHERE user_id = ?", (new_balance, user_id))
             conn.commit()
             conn.close()

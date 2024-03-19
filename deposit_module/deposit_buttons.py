@@ -6,8 +6,11 @@ from deposit_module.order_databasehandler import orderManager
 from deposit_module.create_order import create_order
 import json
 from deposit_module.delete_order import delete_sellix_order
-balancedb = balanceManager('../database.sqlite3')
-orderdb = orderManager('../database.sqlite3')
+from deposit_module.job_dbhandler import JobManager
+from main import confirmation_update_job
+balancedb = balanceManager('database.sqlite3')
+orderdb = orderManager('database.sqlite3')
+jobsdb = JobManager('database.sqlite3')
 with open('config.json', 'r') as file:
         data = json.load(file)
 SELLIX_API = data['SELLIX_API']
@@ -120,8 +123,10 @@ def handle_deposit(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("❌Cancel Invoice", callback_data=f"cncl_{uniqid}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+    message_id = query.message.message_id
     orderdb.insert_order(user_id=user_id, username=username, uniqid=uniqid, status='PENDING', crypto=coin, usdvalue=usdvalue, hash='None', amount=amount, address=address)
-
+    context.job_queue.run_repeating(confirmation_update_job, interval=10, first=0, context={'user_id': user_id, 'uniqid': uniqid, 'username': username, 'usdvalue':usdvalue,'message_id':message_id})
+    jobsdb.add_job(user_id,uniqid,username,usdvalue,message_id)
 
 def handle_cancel_confirmation(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -139,7 +144,6 @@ def handle_cancel_confirmation(update: Update, context: CallbackContext):
 
 def handle_decline_cancel(update: Update, context: CallbackContext):
     query = update.callback_query
-
     uniqid = query.data.split('_')[-1]
     order = orderdb.get_order_by_uniqid(uniqid)
     query.answer()
@@ -150,6 +154,9 @@ def handle_decline_cancel(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("❌Cancel Invoice", callback_data=f"cncl_{uniqid}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+    
+    
+    
 def handle_confirm_cancel(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
@@ -157,7 +164,10 @@ def handle_confirm_cancel(update: Update, context: CallbackContext):
     msg = f""
     keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    if delete_sellix_order(SELLIX_API, uniqid):
+    status, err = delete_sellix_order(SELLIX_API, uniqid)
+    if status:
         query.edit_message_text(f"<b>Order <code>{uniqid}</code> has been cancelled ✅</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+        jobsdb.remove_job(uniqid)
     else:
-        query.edit_message_text("<b>Order Cancellation failed, Contact support to report this issue.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+        query.edit_message_text(f"<b>Order Cancellation failed, Error: {err}</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+

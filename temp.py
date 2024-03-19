@@ -57,7 +57,7 @@ updater.idle()
 print('polling')
 '''
 
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+'''from telegram import ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 # Define a function to handle the /roll command
@@ -89,4 +89,39 @@ dispatcher.add_handler(MessageHandler(Filters.dice, handle_message))
 
 # Start the bot
 updater.start_polling()
-updater.idle()
+updater.idle()'''
+
+
+import requests
+
+# Set your bot's API token
+bot_token = '7010604660:AAFSXx_QkDK3RT3-0sci4Y0ctWQ7tpswvk4'
+
+# Set the chat ID and message ID of the message you want to edit
+chat_id = '5455454489'
+#message_id = 'YOUR_MESSAGE_ID'
+
+
+
+'''# Form the API request URL
+url = f'https://api.telegram.org/bot{bot_token}/editMessageText'
+
+# Set the parameters for editing the message
+params = {
+    'chat_id': chat_id,
+    'message_id': 418,
+    'text': "edited lmfao"
+}
+
+url_send = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+
+# Set the parameters for sending the message
+params_send = {
+    'chat_id': chat_id,
+    'text': "hey lol"
+}
+
+# Send the edit message request
+response = requests.post(url, params=params)
+print(response.text)
+'''

@@ -1,6 +1,15 @@
 import json
 from telegram import InlineKeyboardButton,InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, ParseMode
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, ConversationHandler
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    ConversationHandler,
+    MessageHandler,
+    Filters,
+    CallbackContext,
+    CallbackQueryHandler,
+
+)
 from deposit_module.order_databasehandler import orderManager
 from deposit_module.balance_dbhandler import balanceManager
 from deposit_module.create_order import create_order
@@ -9,12 +18,17 @@ from deposit_module.delete_order import delete_sellix_order
 from datetime import timedelta, datetime
 from deposit_module.deposit_buttons import *
 import logging
+from datetime import datetime
+from deposit_module.job_dbhandler import JobManager
+from casino import cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame
 with open('config.json', 'r') as file:
         data = json.load(file)
 TOKEN = data['TOKEN']
 SELLIX_API_KEY = data['SELLIX_API']
 
+balancedb = balanceManager('database.sqlite3')
 orderdb = orderManager('database.sqlite3')
+jobsdb = JobManager('database.sqlite3')
 admin_userids = [5455454489]
 UNIQID_INDEX = 0
 USER_ID_INDEX = 1
@@ -23,6 +37,7 @@ STATUS_INDEX = 3
 CRYPTO_INDEX = 4
 AMOUNT_INDEX = 5
 HASH_INDEX = 6
+
 def start(update: Update, context: CallbackContext) -> None:
     username = update._effective_user.username
     userid = update.effective_user.id
@@ -76,10 +91,13 @@ def confirmation_update_job(context: CallbackContext):
         logging.error("Unexpected job context format. Ensure it's a dictionary or an iterable of key-value pairs.")
         return
 
-    chat_id, uniqid = job_context.get('chat_id'), job_context.get('uniqid')
+    chat_id, uniqid = job_context.get('user_id'), job_context.get('uniqid')
     username = job_context.get('username')
-    amount = job_context.get('amount')
-
+    usdvalue = job_context.get('usdvalue')
+    msg_id = job_context.get('message_id')
+    edit_count = job_context.get('edit_count', 0)
+    job_context['edit_count'] = edit_count
+    print(job_context)
     now = datetime.now()
 
     first_check_time = job_context.get('first_check_time', now)
@@ -90,18 +108,22 @@ def confirmation_update_job(context: CallbackContext):
     delete_after = timedelta(hours=2)
 
     current_status, crypto_hash = check_order_status(SELLIX_API_KEY, uniqid)
-
     if current_status:
         last_status = orderdb.get_order_status(uniqid)
 
         valid_transitions = [("PENDING", "WAITING_FOR_CONFIRMATIONS"),
                              ("PENDING", "COMPLETED"),
                              ("WAITING_FOR_CONFIRMATIONS", "COMPLETED")]
-
         if (last_status, current_status) in valid_transitions:
+            if job_context['edit_count'] == 0:
+                edit = f"<b>Payment Detected ✅\n\nPlease wait for 2 confirmations.</b>"
+                context.bot.edit_message_text(chat_id=chat_id,message_id=msg_id,text=edit,parse_mode=ParseMode.HTML)
+                job_context['edit_count'] = 1
+                print(f"edited {msg_id} once")
             message = f"Order <code>{uniqid}</code> status changed from <code>{last_status}</code> to <code>{current_status}</code>"
             context.bot.send_message(chat_id=chat_id, text=message, parse_mode='HTML')
             logging.info(f"Order {uniqid} status changed from {last_status} to {current_status}")
+            print(f"Order {uniqid} status changed from {last_status} to {current_status}")
             orderdb.update_order_status(uniqid, current_status)
 
             order_details = orderdb.get_order_details(uniqid)
@@ -116,44 +138,85 @@ def confirmation_update_job(context: CallbackContext):
                 orderdb.update_order_status(uniqid, "CANCELLED")
                 logging.info(f"Order {uniqid} has been automatically cancelled due to timeout, Placed by: {chat_id}")
                 context.job.schedule_removal()
+                jobsdb.remove_job(uniqid)
             else:
                 logging.error(f"Failed to automatically cancel order {uniqid}: {message}")
 
         if current_status == "COMPLETED":
             context.job.enabled = False
-             # credit the amount to the user develop the logic and db for that
-            if key:
-                context.bot.send_message(chat_id=chat_id, text=f"Your key: <code>{key}</code>\nFor Plan: <b>{plan.upper()}</b>\nRedeem it by going into Licenses Section.", parse_mode='HTML')
-                logging.info(f"Order {uniqid} is successfully completed, Plan: {plan}, Buyer: {chat_id}, Removing the Job")
-                license_manager.mark_purchased(key)
-            else:
-                context.bot.send_message(chat_id=chat_id,text=f"Keys are out of stock for Plan: <b>{plan}</b>\nPlease Contact Support.",parse_mode='HTML')
-                logging.info(f"Order {uniqid} is successfully completed, Key not delivered, reason: OUT OF STOCK. Plan: {plan},Buyer: {chat_id}")
+            balancedb.add_to_balance(chat_id,usdvalue)
+            updatedbal = balancedb.get_balance(chat_id)
+            keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            context.bot.send_message(chat_id=chat_id, text=f"<b>Order: <code>{uniqid}</code> Successfully Completed ✅\n\n Added <code>${usdvalue}</code> to your balance💲\n\nUpdated Balance: <code>${updatedbal[2]}</code></b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+            logging.info(f"Added ${usdvalue} to user: {username} userid: {chat_id} updated balance: {updatedbal[2]}")
+            print(f"Added ${usdvalue} to user: {username} userid: {chat_id} updated balance: {updatedbal[2]}")
             context.job.schedule_removal()
+            jobsdb.remove_job(uniqid)
         elif current_status == "VOIDED":
             context.job.enabled = False
             logging.info(f"Order {uniqid} Was Cancelled, Buyer: {chat_id}, Removing the Job")
+            print(f"Order {uniqid} Was Cancelled, Buyer: {chat_id}, Removing the Job")
             context.job.schedule_removal()
+            jobsdb.remove_job(uniqid)
 
     else:
         logging.error(f"No current status for order {uniqid}. It might be an API error or network issue.")
 
-
-
+def admin(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id in admin_userids:
+        admin_commands = '''-> /check_pending : Use this to check for any pending orders left. ONLY EXECUTE AFTER RESTARTING THE BOT.'''
+        context.bot.send_message(chat_id=user_id, text=admin_commands)
+    else:
+        context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
+def check_pending(update:Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id in admin_userids:
+        jobs_json = jobsdb.get_all_jobs_as_json()
+        if jobs_json:
+            jobs = json.loads(jobs_json)
+            for job in jobs:
+                job_context = {
+                    'user_id': job['user_id'],
+                    'uniqid': job['uniqid'],
+                    'username': job['username'],
+                    'usdvalue': job['usdvalue'],
+                    'msg_id': job['msg_id']
+                }
+                context.job_queue.run_repeating(confirmation_update_job, interval=10, first=0, context=job_context)
+                print("added",job_context)
+        else:
+            context.bot.send_message(chat_id=user_id,text="No pending orders found")
+    else:
+        context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
 
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
-    updater.dispatcher.add_handler(CommandHandler('start',start))
-    updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_btc, pattern='^btc$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_ltc, pattern='^ltc$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_eth, pattern='^eth$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_deposit, pattern='^(btc|ltc|eth)_deposit_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_cancel_confirmation,pattern='^cncl_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_decline_cancel,pattern='^decline_cancel_'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_confirm_cancel,pattern='^confirm_cancel_'))
+    dispatcher = updater.dispatcher
+    updater.dispatcher.add_handler(CommandHandler('start',start,run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_btc, pattern='^btc$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_ltc, pattern='^ltc$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_eth, pattern='^eth$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_deposit, pattern='^(btc|ltc|eth)_deposit_',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_cancel_confirmation,pattern='^cncl_',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_decline_cancel,pattern='^decline_cancel_',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_confirm_cancel,pattern='^confirm_cancel_',run_async=True))
+    updater.dispatcher.add_handler(CommandHandler('admin',admin,run_async=True))
+    updater.dispatcher.add_handler(CommandHandler('check_pending',check_pending,run_async=True))
+    conv_handler = ConversationHandler(
+    entry_points=[CallbackQueryHandler(choose_bet,pattern='^dice$',run_async=True)],
+        states={
+        GET_BET_AMOUNT: [MessageHandler(Filters.text & ~Filters.command, get_bet_amount,run_async=True)]
+        },
+        fallbacks=[CallbackQueryHandler(cancel,pattern='^cancel_conv$',run_async=True)],
+        )
+    dispatcher.add_handler(conv_handler)
+    updater.dispatcher.add_handler(CallbackQueryHandler(startgame,pattern='^startgame$'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(abortgame,pattern='^abortgame$'))
     updater.start_polling()
     print("Polling...")
     updater.idle()

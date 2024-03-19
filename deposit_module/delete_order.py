@@ -1,4 +1,5 @@
 import requests
+import json
 
 def delete_sellix_order(api_key, uniqid):
     """
@@ -14,8 +15,22 @@ def delete_sellix_order(api_key, uniqid):
     }
 
     response = requests.delete(url, headers=headers)
-    if response.status_code == 200:
-        return True
+    stripped_string = response.text.replace('void time config', '')
+    r = json.loads(stripped_string)
+    if (r.get("status")) == 200:
+        err_msg = "NULL"
+        return True, err_msg
     else:
-        return False
-#a
+        err_msg = r.get("error")
+        return False, err_msg
+'''url = f"https://dev.sellix.io/v1/payments/fc4deb-3a9075dd36-2b7c78"
+headers = {
+        "Authorization": f"Bearer fnrYmOOCNNPilmJacS2J86rB38mLteBnC1WbpTcIvjbNrL1k1Va6SF7oN9EvdccL"
+    }
+
+response = requests.delete(url, headers=headers)
+stripped_string = response.text.replace('void time config', '')
+json_data = json.loads(stripped_string)
+
+print(json_data.get('status'))
+'''
