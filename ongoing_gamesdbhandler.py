@@ -14,6 +14,13 @@ class OngoingGame:
                                 username TEXT,
                                 bet_amount REAL
                             )''')
+    def get_gameid_from_userid(self, user_id):
+            with sqlite3.connect(self.db_file) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('''SELECT game_id FROM games WHERE user_id = ?''', (user_id,))
+                    game_id = cursor.fetchone()
+                    return game_id[0] if game_id else None
+
 
     def check_user_exists(self, user_id):
         with sqlite3.connect(self.db_file) as conn:
@@ -56,4 +63,3 @@ class OngoingGame:
                 return False
             games = [{'game_id': row[0], 'user_id': row[1], 'username': row[2], 'bet_amount': row[3]} for row in rows]
             return json.dumps(games)
-

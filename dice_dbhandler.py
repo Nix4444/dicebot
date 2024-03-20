@@ -10,7 +10,7 @@ class DiceManager:
     def create_table(self):
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
-            cursor.execute('''CREATE TABLE IF NOT EXISTS games (
+            cursor.execute('''CREATE TABLE IF NOT EXISTS dice (
                                 game_id TEXT PRIMARY KEY,
                                 user_id INTEGER,
                                 username TEXT,
@@ -27,16 +27,16 @@ class DiceManager:
     def add_ids(self, game_id, user_id, username, bet_amount):
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
-            cursor.execute('''INSERT INTO games (game_id, user_id, username, bet_amount)
+            cursor.execute('''INSERT INTO dice (game_id, user_id, username, bet_amount)
                               VALUES (?, ?, ?, ?)''', (game_id, user_id, username, bet_amount))
 
-    def add_round(self, game_id, round_type, round_value):
+    def add_round(self, game_id, round_type, round_value,diceval):
         round_column = f"{round_type}_round_{round_value}"
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
-            cursor.execute(f"UPDATE games SET {round_column} = ? WHERE game_id = ?", (round_value, game_id))
+            cursor.execute(f"UPDATE dice SET {round_column} = ? WHERE game_id = ?", (diceval, game_id))
 
     def add_winner(self, game_id, winner):
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE games SET winner = ? WHERE game_id = ?", (winner, game_id))
+            cursor.execute("UPDATE dice SET winner = ? WHERE game_id = ?", (winner, game_id))

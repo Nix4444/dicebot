@@ -20,7 +20,7 @@ from deposit_module.deposit_buttons import *
 import logging
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
-from casino import cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame
+from casino import cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame,botroll1
 with open('config.json', 'r') as file:
         data = json.load(file)
 TOKEN = data['TOKEN']
@@ -191,6 +191,7 @@ def check_pending(update:Update, context: CallbackContext):
     else:
         context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
 
+
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
@@ -217,6 +218,7 @@ def main() -> None:
     dispatcher.add_handler(conv_handler)
     updater.dispatcher.add_handler(CallbackQueryHandler(startgame,pattern='^startgame$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(abortgame,pattern='^abortgame$'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(botroll1,pattern='^botroll1$'))
     updater.start_polling()
     print("Polling...")
     updater.idle()
