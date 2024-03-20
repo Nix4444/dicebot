@@ -1,4 +1,4 @@
-from telegram import InlineKeyboardButton,InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, ParseMode, KeyboardButton
+from telegram import InlineKeyboardButton,InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, ParseMode, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, ConversationHandler
 from deposit_module.balance_dbhandler import balanceManager
 from deposit_module.order_databasehandler import orderManager
@@ -13,6 +13,9 @@ jobsdb = JobManager('database.sqlite3')
 ongoing = OngoingGame('database.sqlite3')
 dicedata = DiceManager('database.sqlite3')
 GET_BET_AMOUNT = 0
+GET_USER_DICE_ONE = 1
+GET_USER_DICE_TWO = 2
+GET_USER_DICE_THREE = 3
 
 def generate_random_id(length=20):
         characters = string.ascii_letters + string.digits
@@ -97,7 +100,7 @@ def startgame(update:Update, context:CallbackContext):
                 print("gameid",gameid)
                 ongoing.add_game(gameid,userid,username,bet_amt)
                 dicedata.add_ids(gameid,userid,username,bet_amt)
-                keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll1")]]
+                keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_1")]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(f"<b>♠️ Starting Round 1...\n\nPress the button to make the bot roll the dice🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                 context.user_data.clear()
@@ -124,12 +127,26 @@ def botroll1(update:Update,context:CallbackContext):
     message = context.bot.send_dice(chat_id=userid, emoji='🎲')
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','1',dice_value)
-    context.bot.send_message(chat_id=userid,text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice button to roll.</b>",parse_mode=ParseMode.HTML)
-    print("removed",gameid,ongoing.remove_game(gameid))
+    keyboard = [[KeyboardButton("🎲")]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid,text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+    return GET_USER_DICE_ONE
+
+def userroll1(update:Update,context:CallbackContext):
+    print("in userroll1")
+    user_first_roll = update.message
+    userid = update.effective_user.id
+    if user_first_roll.dice:
+        dice_emoji = user_first_roll.dice.emoji
+        value = user_first_roll.dice.value
+        context.bot.send_message(chat_id=userid,text=f"<b>User rolled {value}</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
+        return ConversationHandler.END
+    else:
+        context.bot.send_message(chat_id=userid,text=f"<b>⚠️Please use the button to send dice. Do not send anything else.</b>",)
+        return GET_USER_DICE_ONE
 
 
-
-
+    #print("removed",gameid,ongoing.remove_game(gameid))
 
 
 
