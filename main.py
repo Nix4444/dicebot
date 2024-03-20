@@ -20,7 +20,7 @@ from deposit_module.deposit_buttons import *
 import logging
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
-from casino import GET_USER_DICE_ONE, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame,botroll1,userroll1, GET_USER_DICE_ONE
+from casino import GET_USER_DICE_ONE, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame,botroll1,user_roll1, GET_USER_DICE_ONE
 with open('config.json', 'r') as file:
         data = json.load(file)
 TOKEN = data['TOKEN']
@@ -219,14 +219,14 @@ def main() -> None:
     updater.dispatcher.add_handler(CallbackQueryHandler(startgame,pattern='^startgame$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(abortgame,pattern='^abortgame$'))
     updater.dispatcher.add_handler(CallbackQueryHandler(botroll1,pattern='^botroll_1$'))
-    conv_handler2 = ConversationHandler(
-        entry_points=[CallbackQueryHandler(botroll1,pattern='^botroll_1$',run_async=True)],
-        states={
-            GET_USER_DICE_ONE : [MessageHandler(Filters.text & ~Filters.command,userroll1,run_async=True)]
-        },
-        fallbacks=[CallbackQueryHandler(cancel,pattern='^cancel_conv$',run_async=True)]
-    )
-    dispatcher.add_handler(conv_handler2)
+    conversation_handler = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll1, pattern='^botroll_1$')],
+    states={
+        GET_USER_DICE_ONE: [MessageHandler(Filters.text & ~Filters.command, user_roll1)]
+    },
+    fallbacks=[CallbackQueryHandler(cancel, pattern='^cancel_conv$')],
+)
+    dispatcher.add_handler(conversation_handler)
     #dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex("^🎲$"), userroll1))
     updater.start_polling()
     print("Polling...")
