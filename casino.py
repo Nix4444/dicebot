@@ -18,6 +18,11 @@ GET_USER_DICE_TWO = 2
 GET_USER_DICE_THREE = 3
 GET_USER_DICE_FOUR = 4
 GET_USER_DICE_FIVE = 5
+ROUND_ONE_TIED = 6
+ROUND_TWO_TIED = 7
+ROUND_THREE_TIED = 8
+ROUND_FOUR_TIED = 9
+ROUND_FIVE_TIED = 10
 
 def generate_random_id(length=20):
         characters = string.ascii_letters + string.digits
@@ -145,14 +150,15 @@ def user_roll1(update: Update, context: CallbackContext):
     if usermsg.dice:
             first_bot_roll_value = dicedata.get_round_value(gameid,'bot','1')
             value = usermsg.dice.value
+            context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
             if value == first_bot_roll_value:
-                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 1 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{first_bot_roll_value}</code>\n\nRound 1 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
-                ongoing.remove_game(gameid) #remove this later
-                #finish the logic
-                return ConversationHandler.END #CHANGE THIS
+                keyboard = [[InlineKeyboardButton("🎲 Play Round 1 Again",callback_data="reroundone")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 1 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{first_bot_roll_value}</code>\n\nRound 1 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+
+                return ROUND_ONE_TIED
             else:
                 dicedata.add_round(gameid,'user','1',value)
-                context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
                 if value > first_bot_roll_value:
                     context.bot.send_message(chat_id=userid,text=f'''<b><u>Round 1 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{first_bot_roll_value}</code>\nYou Won Round 1.\n\n<u>Scores💯</u>
                         \nYour Score: <code>1</code>\nBot Score: <code>0</code></b>''',reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
@@ -195,14 +201,14 @@ def user_roll2(update: Update, context: CallbackContext):
     if usermsg2.dice:
             second_bot_roll_value = dicedata.get_round_value(gameid,'bot','2')
             value = usermsg2.dice.value
+            context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
             if value == second_bot_roll_value:
-                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 2 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{second_bot_roll_value}</code>\n\nRound 2 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
-                ongoing.remove_game(gameid) #remove this later
-                #finish the logic
-                return ConversationHandler.END #CHANGE THIS
+                keyboard = [[InlineKeyboardButton("🎲 Play Round 2 Again",callback_data="reroundtwo")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 2 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{second_bot_roll_value}</code>\n\nRound 2 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                return ROUND_TWO_TIED
             else:
                 dicedata.add_round(gameid,'user','2',value)
-                context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
                 curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
                 print(curr_bot_score,curr_user_score)
                 if value > second_bot_roll_value:
@@ -250,14 +256,14 @@ def user_roll3(update: Update, context: CallbackContext):
     if usermsg3.dice:
             third_bot_roll_value = dicedata.get_round_value(gameid,'bot','3')
             value = usermsg3.dice.value
+            context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
             if value == third_bot_roll_value:
-                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 3 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{third_bot_roll_value}</code>\n\nRound 3 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
-                ongoing.remove_game(gameid) #remove this later
-                #finish the logic
-                return ConversationHandler.END #CHANGE THIS
+                keyboard = [[InlineKeyboardButton("🎲 Play Round 3 Again",callback_data="reroundthree")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 3 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{third_bot_roll_value}</code>\n\nRound 3 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                return ROUND_THREE_TIED
             else:
                 dicedata.add_round(gameid,'user','3',value)
-                context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
                 curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
                 print(curr_bot_score,curr_user_score)
                 if value > third_bot_roll_value:
@@ -273,9 +279,9 @@ def user_roll3(update: Update, context: CallbackContext):
                         curr_balance = curr_balance[2]
                         balancedb.add_to_balance(userid,credit)
                         dicedata.add_winner(gameid,'USER')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
-                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
                         return ConversationHandler.END
                     else:
@@ -294,7 +300,7 @@ def user_roll3(update: Update, context: CallbackContext):
                         bet_amt = int(bet_amt[0])
                         curr_balance = balancedb.get_balance(userid)
                         dicedata.add_winner(gameid,'BOT')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
                         context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
@@ -328,14 +334,14 @@ def user_roll4(update: Update, context: CallbackContext):
     if usermsg4.dice:
             four_bot_roll_value = dicedata.get_round_value(gameid,'bot','4')
             value = usermsg4.dice.value
+            context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
             if value == four_bot_roll_value:
-                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 4 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{four_bot_roll_value}</code>\n\nRound 4 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
-                ongoing.remove_game(gameid) #remove this later
-                #finish the logic
-                return ConversationHandler.END #CHANGE THIS
+                keyboard = [[InlineKeyboardButton("🎲 Play Round 4 Again",callback_data="reroundfour")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 4 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{four_bot_roll_value}</code>\n\nRound 4 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                return ROUND_FOUR_TIED
             else:
                 dicedata.add_round(gameid,'user','4',value)
-                context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
                 curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
                 print(curr_bot_score,curr_user_score)
                 if value > four_bot_roll_value:
@@ -351,9 +357,9 @@ def user_roll4(update: Update, context: CallbackContext):
                         curr_balance = curr_balance[2]
                         balancedb.add_to_balance(userid,credit)
                         dicedata.add_winner(gameid,'USER')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
-                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
                         return ConversationHandler.END
                     else:
@@ -372,7 +378,7 @@ def user_roll4(update: Update, context: CallbackContext):
                         bet_amt = int(bet_amt[0])
                         curr_balance = balancedb.get_balance(userid)
                         dicedata.add_winner(gameid,'BOT')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
                         context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
@@ -406,14 +412,14 @@ def user_roll5(update: Update, context: CallbackContext):
     if usermsg5.dice:
             five_bot_roll_value = dicedata.get_round_value(gameid,'bot','5')
             value = usermsg5.dice.value
+            context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
             if value == five_bot_roll_value:
-                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 5 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{five_bot_roll_value}</code>\n\nRound 5 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=ReplyKeyboardRemove(),parse_mode=ParseMode.HTML)
-                ongoing.remove_game(gameid) #remove this later
-                #finish the logic
-                return ConversationHandler.END #CHANGE THIS
+                keyboard = [[InlineKeyboardButton("🎲 Play Round 5 Again",callback_data="reroundfive")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                context.bot.send_message(chat_id=userid,text=f"<b><u>Round 5 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{five_bot_roll_value}</code>\n\nRound 5 is tied.\n\nPress the button to make the bot roll the dice again🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                return ROUND_FOUR_TIED
             else:
                 dicedata.add_round(gameid,'user','5',value)
-                context.bot.send_message(chat_id=userid, text=f"<b>You rolled <code>{value}</code>.</b>",reply_markup=ReplyKeyboardRemove(), parse_mode="HTML")
                 curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
                 print(curr_bot_score,curr_user_score)
                 if value > five_bot_roll_value:
@@ -429,9 +435,9 @@ def user_roll5(update: Update, context: CallbackContext):
                         curr_balance = curr_balance[2]
                         balancedb.add_to_balance(userid,credit)
                         dicedata.add_winner(gameid,'USER')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
-                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                        context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
                         return ConversationHandler.END
                     else:
@@ -450,7 +456,7 @@ def user_roll5(update: Update, context: CallbackContext):
                         bet_amt = int(bet_amt[0])
                         curr_balance = balancedb.get_balance(userid)
                         dicedata.add_winner(gameid,'BOT')
-                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu2')]]
                         reply_markup = InlineKeyboardMarkup(keyboard)
                         context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                         ongoing.remove_game(gameid)
@@ -463,3 +469,69 @@ def user_roll5(update: Update, context: CallbackContext):
     else:
             context.bot.send_message(chat_id=userid, text=f"<b>Invalid response, roll a dice</b>", parse_mode="HTML")
             return GET_USER_DICE_FIVE
+
+def reround_one(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text("<b>Bot is rolling...</b>", parse_mode="HTML")
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
+    message = context.bot.send_dice(chat_id=userid, emoji='🎲')
+    dice_value = message.dice.value
+    dicedata.add_round(gameid,'bot','1',dice_value)
+    reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
+    return GET_USER_DICE_ONE
+
+def reround_two(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text("<b>Bot is rolling...</b>", parse_mode="HTML")
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
+    message = context.bot.send_dice(chat_id=userid, emoji='🎲')
+    dice_value = message.dice.value
+    dicedata.add_round(gameid,'bot','2',dice_value)
+    reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
+    return GET_USER_DICE_TWO
+
+def reround_three(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text("<b>Bot is rolling...</b>", parse_mode="HTML")
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
+    message = context.bot.send_dice(chat_id=userid, emoji='🎲')
+    dice_value = message.dice.value
+    dicedata.add_round(gameid,'bot','3',dice_value)
+    reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
+    return GET_USER_DICE_THREE
+
+def reround_four(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text("<b>Bot is rolling...</b>", parse_mode="HTML")
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
+    message = context.bot.send_dice(chat_id=userid, emoji='🎲')
+    dice_value = message.dice.value
+    dicedata.add_round(gameid,'bot','4',dice_value)
+    reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
+    return GET_USER_DICE_FOUR
+
+def reround_five(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text("<b>Bot is rolling...</b>", parse_mode="HTML")
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
+    message = context.bot.send_dice(chat_id=userid, emoji='🎲')
+    dice_value = message.dice.value
+    dicedata.add_round(gameid,'bot','5',dice_value)
+    reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
+    return GET_USER_DICE_FIVE
+     

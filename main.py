@@ -21,7 +21,8 @@ import logging
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
 from casino import GET_USER_DICE_ONE, GET_USER_DICE_TWO, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame, GET_USER_DICE_ONE,botroll1,user_roll1,botroll2, GET_USER_DICE_TWO, user_roll2, botroll3,user_roll3,GET_USER_DICE_THREE
-from casino import GET_USER_DICE_FOUR, botroll4, user_roll4, GET_USER_DICE_FIVE, botroll5,user_roll5
+from casino import GET_USER_DICE_FOUR, botroll4, user_roll4, GET_USER_DICE_FIVE, botroll5,user_roll5,ROUND_ONE_TIED,ROUND_TWO_TIED,ROUND_THREE_TIED,ROUND_FOUR_TIED,ROUND_FIVE_TIED,reround_one,reround_two,reround_three,reround_four,reround_five
+
 with open('config.json', 'r') as file:
         data = json.load(file)
 TOKEN = data['TOKEN']
@@ -191,7 +192,22 @@ def check_pending(update:Update, context: CallbackContext):
             context.bot.send_message(chat_id=user_id,text="No pending orders found")
     else:
         context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
+def reply_mainmenu(update:Update,context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    username = update.effective_user.username
+    userid = update.effective_user.id
+    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
 
+    balancedb.add_entry(userid,username)
+    keyboard = [
+        [InlineKeyboardButton("💲Deposit", callback_data='deposit'),
+        InlineKeyboardButton("💵Withdraw", callback_data='withdraw')],
+        [InlineKeyboardButton("💸Balance", callback_data='balance')],
+        [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    context.bot.send_message(chat_id=userid,text=welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
@@ -209,6 +225,7 @@ def main() -> None:
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_confirm_cancel,pattern='^confirm_cancel_',run_async=True))
     updater.dispatcher.add_handler(CommandHandler('admin',admin,run_async=True))
     updater.dispatcher.add_handler(CommandHandler('check_pending',check_pending,run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(reply_mainmenu,pattern='^mainmenu2$'))
     conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(choose_bet,pattern='^dice$',run_async=True)],
         states={
@@ -223,7 +240,8 @@ def main() -> None:
     conversation_handler2 = ConversationHandler(
     entry_points=[CallbackQueryHandler(botroll1, pattern='^botroll_1$',run_async=True)],
     states={
-        GET_USER_DICE_ONE: [MessageHandler(Filters.all, user_roll1,run_async=True)]
+        GET_USER_DICE_ONE: [MessageHandler(Filters.all, user_roll1,run_async=True)],
+        ROUND_ONE_TIED: [CallbackQueryHandler(reround_one,pattern='^reroundone$',run_async=True)]
     },
     fallbacks=[],
 )
@@ -231,7 +249,8 @@ def main() -> None:
     conversation_handler3 = ConversationHandler(
     entry_points=[CallbackQueryHandler(botroll2, pattern='^botroll_2$',run_async=True)],
     states={
-        GET_USER_DICE_TWO: [MessageHandler(Filters.all, user_roll2,run_async=True)]
+        GET_USER_DICE_TWO: [MessageHandler(Filters.all, user_roll2,run_async=True)],
+        ROUND_TWO_TIED: [CallbackQueryHandler(reround_two,pattern='^reroundtwo$',run_async=True)]
     },
     fallbacks=[],
 )
@@ -240,7 +259,8 @@ def main() -> None:
     conversation_handler4 = ConversationHandler(
     entry_points=[CallbackQueryHandler(botroll3, pattern='^botroll_3$',run_async=True)],
     states={
-        GET_USER_DICE_THREE: [MessageHandler(Filters.all, user_roll3,run_async=True)]
+        GET_USER_DICE_THREE: [MessageHandler(Filters.all, user_roll3,run_async=True)],
+        ROUND_THREE_TIED: [CallbackQueryHandler(reround_three,pattern='^reroundthree$',run_async=True)]
     },
     fallbacks=[],
 )
@@ -249,7 +269,8 @@ def main() -> None:
     conversation_handler5 = ConversationHandler(
     entry_points=[CallbackQueryHandler(botroll4, pattern='^botroll_4$',run_async=True)],
     states={
-        GET_USER_DICE_FOUR: [MessageHandler(Filters.all, user_roll4,run_async=True)]
+        GET_USER_DICE_FOUR: [MessageHandler(Filters.all, user_roll4,run_async=True)],
+        ROUND_FOUR_TIED: [CallbackQueryHandler(reround_four,pattern='^reroundfour$',run_async=True)]
     },
     fallbacks=[],
 )
@@ -258,7 +279,8 @@ def main() -> None:
     conversation_handler6 = ConversationHandler(
     entry_points=[CallbackQueryHandler(botroll5, pattern='^botroll_5$',run_async=True)],
     states={
-        GET_USER_DICE_FIVE: [MessageHandler(Filters.all, user_roll5,run_async=True)]
+        GET_USER_DICE_FIVE: [MessageHandler(Filters.all, user_roll5,run_async=True)],
+        ROUND_FIVE_TIED: [CallbackQueryHandler(reround_five,pattern='^reroundfive$',run_async=True)]
     },
     fallbacks=[],
 )

@@ -8,33 +8,42 @@ import json
 from deposit_module.delete_order import delete_sellix_order
 from deposit_module.job_dbhandler import JobManager
 from main import confirmation_update_job
+from ongoing_gamesdbhandler import OngoingGame
 balancedb = balanceManager('database.sqlite3')
 orderdb = orderManager('database.sqlite3')
 jobsdb = JobManager('database.sqlite3')
+ongoing = OngoingGame('database.sqlite3')
 with open('config.json', 'r') as file:
         data = json.load(file)
 SELLIX_API = data['SELLIX_API']
 
 def choose_crypto(update: Update, context: CallbackContext):
+    userid = update.effective_user.id
     query = update.callback_query
     query.answer()
-    coin_msg = "<b>🏦Select the crypto to pay with</b>"
-    keyboard = [
-        [
-            InlineKeyboardButton("Bitcoin", callback_data='btc')
-        ],
-        [
-            InlineKeyboardButton("Litecoin", callback_data='ltc')
-        ],
-        [
-            InlineKeyboardButton("Ethereum", callback_data='eth')
-        ],
-        [
-            InlineKeyboardButton("◀️Back", callback_data='mainmenu'),
+    if ongoing.check_user_exists(userid):
+        keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        msg = f"<b>⚠ You have game unfinished, Finish it first before creating an invoice.</b>"
+        query.edit_message_text(msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+    else:
+        coin_msg = "<b>🏦Select the crypto to pay with</b>"
+        keyboard = [
+            [
+                InlineKeyboardButton("Bitcoin", callback_data='btc')
+            ],
+            [
+                InlineKeyboardButton("Litecoin", callback_data='ltc')
+            ],
+            [
+                InlineKeyboardButton("Ethereum", callback_data='eth')
+            ],
+            [
+                InlineKeyboardButton("◀️Back", callback_data='mainmenu'),
+            ]
         ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text(coin_msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.edit_message_text(coin_msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 def handle_btc(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -161,7 +170,7 @@ def handle_confirm_cancel(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
     uniqid = query.data.split('_')[-1]
-    msg = f""
+    
     keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     status, err = delete_sellix_order(SELLIX_API, uniqid)
