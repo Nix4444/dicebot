@@ -20,7 +20,8 @@ from deposit_module.deposit_buttons import *
 import logging
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
-from casino import GET_USER_DICE_ONE, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame,botroll1,user_roll1, GET_USER_DICE_ONE
+from casino import GET_USER_DICE_ONE, GET_USER_DICE_TWO, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame, GET_USER_DICE_ONE,botroll1,user_roll1,botroll2, GET_USER_DICE_TWO, user_roll2, botroll3,user_roll3,GET_USER_DICE_THREE
+from casino import GET_USER_DICE_FOUR, botroll4, user_roll4, GET_USER_DICE_FIVE, botroll5,user_roll5
 with open('config.json', 'r') as file:
         data = json.load(file)
 TOKEN = data['TOKEN']
@@ -216,18 +217,52 @@ def main() -> None:
         fallbacks=[CallbackQueryHandler(cancel,pattern='^cancel_conv$',run_async=True)],
         )
     dispatcher.add_handler(conv_handler)
-    updater.dispatcher.add_handler(CallbackQueryHandler(startgame,pattern='^startgame$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(abortgame,pattern='^abortgame$'))
-    updater.dispatcher.add_handler(CallbackQueryHandler(botroll1,pattern='^botroll_1$'))
-    conversation_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(botroll1, pattern='^botroll_1$')],
+    updater.dispatcher.add_handler(CallbackQueryHandler(startgame,pattern='^startgame$',run_async=True))
+    updater.dispatcher.add_handler(CallbackQueryHandler(abortgame,pattern='^abortgame$',run_async=True))
+    #updater.dispatcher.add_handler(CallbackQueryHandler(botroll1,pattern='^botroll_1$'))
+    conversation_handler2 = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll1, pattern='^botroll_1$',run_async=True)],
     states={
-        GET_USER_DICE_ONE: [MessageHandler(Filters.text & ~Filters.command, user_roll1)]
+        GET_USER_DICE_ONE: [MessageHandler(Filters.all, user_roll1,run_async=True)]
     },
-    fallbacks=[CallbackQueryHandler(cancel, pattern='^cancel_conv$')],
+    fallbacks=[],
 )
-    dispatcher.add_handler(conversation_handler)
-    #dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex("^🎲$"), userroll1))
+    dispatcher.add_handler(conversation_handler2)
+    conversation_handler3 = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll2, pattern='^botroll_2$',run_async=True)],
+    states={
+        GET_USER_DICE_TWO: [MessageHandler(Filters.all, user_roll2,run_async=True)]
+    },
+    fallbacks=[],
+)
+    dispatcher.add_handler(conversation_handler3)
+
+    conversation_handler4 = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll3, pattern='^botroll_3$',run_async=True)],
+    states={
+        GET_USER_DICE_THREE: [MessageHandler(Filters.all, user_roll3,run_async=True)]
+    },
+    fallbacks=[],
+)
+    dispatcher.add_handler(conversation_handler4)
+
+    conversation_handler5 = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll4, pattern='^botroll_4$',run_async=True)],
+    states={
+        GET_USER_DICE_FOUR: [MessageHandler(Filters.all, user_roll4,run_async=True)]
+    },
+    fallbacks=[],
+)
+    dispatcher.add_handler(conversation_handler5)
+
+    conversation_handler6 = ConversationHandler(
+    entry_points=[CallbackQueryHandler(botroll5, pattern='^botroll_5$',run_async=True)],
+    states={
+        GET_USER_DICE_FIVE: [MessageHandler(Filters.all, user_roll5,run_async=True)]
+    },
+    fallbacks=[],
+)
+    dispatcher.add_handler(conversation_handler6)
     updater.start_polling()
     print("Polling...")
     updater.idle()

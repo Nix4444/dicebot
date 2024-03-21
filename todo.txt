@@ -1,0 +1,1 @@
+check if user has ongoing game and dont allow to create invoice until game is over.

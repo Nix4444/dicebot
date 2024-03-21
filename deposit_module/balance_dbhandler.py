@@ -7,7 +7,7 @@ class balanceManager:
 
     def _connect(self):
         return sqlite3.connect(self.db_path)
-    
+
     def _create_table(self):
         conn = self._connect()
         cursor = conn.cursor()
@@ -42,7 +42,7 @@ class balanceManager:
 
             conn.commit()
             conn.close()
-            return True  
+            return True
         else:
             conn.close()
             return False  # Return False to indicate that user_id already exists
@@ -50,12 +50,12 @@ class balanceManager:
         conn = self._connect()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT amount FROM balances WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT * FROM balances WHERE user_id = ?", (user_id,))
         existing_user = cursor.fetchone()
 
         if existing_user:
             # Update user's balance by adding the amount
-            new_balance = existing_user[0] + amount
+            new_balance = existing_user[2] + amount
             cursor.execute("UPDATE balances SET amount = ? WHERE user_id = ?", (new_balance, user_id))
             conn.commit()
             conn.close()
@@ -69,13 +69,13 @@ class balanceManager:
         existing_user = cursor.fetchone()
 
         if existing_user:
-            current_balance = existing_user[3]
+            current_balance = existing_user[2]
             # Deduct amount from user's balance
             new_balance = current_balance - amount
             cursor.execute("UPDATE balances SET amount = ? WHERE user_id = ?", (new_balance, user_id))
             conn.commit()
             conn.close()
-            return True  
+            return True
         else:
             conn.close()
             return False

@@ -55,7 +55,7 @@ class balanceManager:
 
         if existing_user:
             # Update user's balance by adding the amount
-            new_balance = existing_user[3] + amount
+            new_balance = existing_user[2] + amount
             cursor.execute("UPDATE balances SET amount = ? WHERE user_id = ?", (new_balance, user_id))
             conn.commit()
             conn.close()
@@ -69,7 +69,7 @@ class balanceManager:
         existing_user = cursor.fetchone()
 
         if existing_user:
-            current_balance = existing_user[3]
+            current_balance = existing_user[2]
             # Deduct amount from user's balance
             new_balance = current_balance - amount
             cursor.execute("UPDATE balances SET amount = ? WHERE user_id = ?", (new_balance, user_id))
