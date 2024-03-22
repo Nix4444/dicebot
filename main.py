@@ -225,7 +225,7 @@ def main() -> None:
     updater.dispatcher.add_handler(CallbackQueryHandler(handle_confirm_cancel,pattern='^confirm_cancel_',run_async=True))
     updater.dispatcher.add_handler(CommandHandler('admin',admin,run_async=True))
     updater.dispatcher.add_handler(CommandHandler('check_pending',check_pending,run_async=True))
-    updater.dispatcher.add_handler(CallbackQueryHandler(reply_mainmenu,pattern='^mainmenu2$'))
+    updater.dispatcher.add_handler(CallbackQueryHandler(reply_mainmenu,pattern='^mainmenu2$',run_async=True))
     conv_handler = ConversationHandler(
     entry_points=[CallbackQueryHandler(choose_bet,pattern='^dice$',run_async=True)],
         states={

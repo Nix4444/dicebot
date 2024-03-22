@@ -1,57 +1,29 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, Filters
-from telegram.ext import CallbackContext
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters
 
-# States
-NAME = 0
-NAME1 = 1
-
-def start(update: Update, context: CallbackContext) -> int:
-    """Start the conversation and ask for the user's name."""
-    keyboard = [[InlineKeyboardButton("Click here to start", callback_data='start')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text("Hi there! Click on the button below to start.", reply_markup=reply_markup)
-    return NAME
-
-def handle_button_click(update: Update, context: CallbackContext) -> int:
-    """Handle the button click."""
-    query = update.callback_query
-    query.answer()
-    query.message.reply_text("Please tell me your name.")
-    return NAME
-
-def save_name(update: Update, context: CallbackContext) -> int:
-    """Save the name and send it back."""
-    name = update.message.text
-    update.message.reply_text(f"Nice to meet you, {name}!")
-    return ConversationHandler.END
-
-def cancel(update: Update, context: CallbackContext) -> int:
-    """Cancel and end the conversation."""
-    update.message.reply_text("Canceled.")
-    return ConversationHandler.END
+def check_forwarded_dice(update: Update, context: CallbackContext):
+    message = update.effective_message
+    if message.forward_from or message.forward_from_chat:
+        # Check if the message is a forwarded message
+        if hasattr(message, 'dice'):
+            # The message has a dice object, meaning it's a dice roll
+            context.bot.send_message(chat_id=message.chat_id,
+                                     text=f"Dice with value {message.dice.value} was forwarded to the bot.")
+        elif '🎲' in message.text:
+            # The message contains a static dice emoji in text
+            context.bot.send_message(chat_id=message.chat_id,
+                                     text="A message with a dice emoji was forwarded to the bot.")
+        else:
+            context.bot.send_message(chat_id=message.chat_id,
+                                     text="The forwarded message does not contain a dice emoji.")
+    else:
+        context.bot.send_message(chat_id=message.chat_id,
+                                 text="This message was not forwarded.")
 
 def main():
-    # Set up the Telegram Bot
     updater = Updater("7010604660:AAFSXx_QkDK3RT3-0sci4Y0ctWQ7tpswvk4", use_context=True)
-    dispatcher = updater.dispatcher
-
-    # Add command handler for /start
-    dispatcher.add_handler(CommandHandler("start", start))
-
-    # Define ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(handle_button_click, pattern='^start$')],
-        states={
-            NAME: [MessageHandler(Filters.text & ~Filters.command, save_name)]
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
-
-    # Add ConversationHandler to dispatcher
-    dispatcher.add_handler(conv_handler)
-
-    # Start the Bot
+    dp = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.all, check_forwarded_dice))
     updater.start_polling()
     updater.idle()
 
