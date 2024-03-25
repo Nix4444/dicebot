@@ -23,7 +23,7 @@ def delete_sellix_order(api_key, uniqid):
     else:
         err_msg = r.get("error")
         return False, err_msg
-'''url = f"https://dev.sellix.io/v1/payments/fc4deb-3a9075dd36-2b7c78"
+url = f"https://dev.sellix.io/v1/payments/ad3f3a-83655015c5-d3071c"
 headers = {
         "Authorization": f"Bearer fnrYmOOCNNPilmJacS2J86rB38mLteBnC1WbpTcIvjbNrL1k1Va6SF7oN9EvdccL"
     }
@@ -33,4 +33,3 @@ stripped_string = response.text.replace('void time config', '')
 json_data = json.loads(stripped_string)
 
 print(json_data.get('status'))
-'''

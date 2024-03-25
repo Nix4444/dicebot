@@ -30,10 +30,6 @@ class JobManager:
             cursor = conn.cursor()
             cursor.execute('''INSERT INTO jobs (user_id, uniqid, username, usdvalue, msg_id)
                               VALUES (?, ?, ?, ?, ?)''', (user_id, uniqid, username, usdvalue,msg_id))
-    def check_job_exists(self,userid):
-        with sqlite3.connect(self.db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''''')
 
     def remove_job(self, uniqid):
         with sqlite3.connect(self.db_file) as conn:

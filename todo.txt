@@ -1,1 +1,5 @@
-check if user has ongoing game and dont allow to create invoice until game is over. ✅
+eth withdrawal fee $2
+merge qr code and order msg into one
+fix /checpending command
+add a remove game command for admins
+remove unnecessary print statements

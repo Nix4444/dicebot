@@ -22,6 +22,11 @@ from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
 from casino import GET_USER_DICE_ONE, GET_USER_DICE_TWO, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame, GET_USER_DICE_ONE,botroll1,user_roll1,botroll2, GET_USER_DICE_TWO, user_roll2, botroll3,user_roll3,GET_USER_DICE_THREE
 from casino import GET_USER_DICE_FOUR, botroll4, user_roll4, GET_USER_DICE_FIVE, botroll5,user_roll5,ROUND_ONE_TIED,ROUND_TWO_TIED,ROUND_THREE_TIED,ROUND_FOUR_TIED,ROUND_FIVE_TIED,reround_one,reround_two,reround_three,reround_four,reround_five
+from withdraw import show_coins,GET_WITHDRAW_AMOUNT_BTC,cancel_withdrawal,GET_BTC_ADDRESS,abort_withdrawal
+from withdraw import withdraw_ltc,GET_WITHDRAW_AMOUNT_LTC,get_amount_ltc, get_address_ltc,GET_LTC_ADDRESS,process_ltc
+from withdraw import withdraw_eth,GET_WITHDRAW_AMOUNT_ETH,get_amount_eth, get_address_eth,GET_ETH_ADDRESS,process_eth
+from withdrawaldata_dbhandler import WithdrawalData
+from withdrawalstate_dbhandler import WithdrawalState
 
 with open('config.json', 'r') as file:
         data = json.load(file)
@@ -31,6 +36,8 @@ SELLIX_API_KEY = data['SELLIX_API']
 balancedb = balanceManager('database.sqlite3')
 orderdb = orderManager('database.sqlite3')
 jobsdb = JobManager('database.sqlite3')
+withdrawaldb = WithdrawalData('database.sqlite3')
+withdrawalstate = WithdrawalState('database.sqlite3')
 admin_userids = [5455454489]
 UNIQID_INDEX = 0
 USER_ID_INDEX = 1
@@ -79,6 +86,25 @@ def edit_to_main(update:Update, context:CallbackContext):
         [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
         ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    query.edit_message_text(welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+
+def edit_to_main_withdraw(update:Update, context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    username = update.effective_user.username
+    userid = update.effective_user.id
+    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+
+    balancedb.add_entry(userid,username)
+    keyboard = [
+        [InlineKeyboardButton("💲Deposit", callback_data='deposit'),
+        InlineKeyboardButton("💵Withdraw", callback_data='withdraw')],
+        [InlineKeyboardButton("💸Balance", callback_data='balance')],
+        [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    iswithdrawing.remove_record(userid)
     query.edit_message_text(welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 
 def confirmation_update_job(context: CallbackContext):
@@ -136,6 +162,9 @@ def confirmation_update_job(context: CallbackContext):
         if last_status == "PENDING" and time_diff > delete_after:
             success, message = delete_sellix_order(SELLIX_API_KEY, uniqid)
             if success:
+                edit = f"<b>Invoice Cancelled ❌</b>"
+                context.bot.edit_message_text(chat_id=chat_id,message_id=msg_id,text=edit,parse_mode=ParseMode.HTML)
+                job_context['edit_count'] = 1
                 context.bot.send_message(chat_id=chat_id, text=f"Order <code>{uniqid}</code> has been automatically cancelled due to timeout.", parse_mode='HTML')
                 orderdb.update_order_status(uniqid, "CANCELLED")
                 logging.info(f"Order {uniqid} has been automatically cancelled due to timeout, Placed by: {chat_id}")
@@ -164,11 +193,34 @@ def confirmation_update_job(context: CallbackContext):
 
     else:
         logging.error(f"No current status for order {uniqid}. It might be an API error or network issue.")
+def reply_mainmenu(update:Update,context:CallbackContext):
+    query = update.callback_query
+    query.answer()
+    username = update.effective_user.username
+    userid = update.effective_user.id
+    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+
+    balancedb.add_entry(userid,username)
+    keyboard = [
+        [InlineKeyboardButton("💲Deposit", callback_data='deposit'),
+        InlineKeyboardButton("💵Withdraw", callback_data='withdraw')],
+        [InlineKeyboardButton("💸Balance", callback_data='balance')],
+        [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    context.bot.send_message(chat_id=userid,text=welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 
 def admin(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if user_id in admin_userids:
-        admin_commands = '''-> /check_pending : Use this to check for any pending orders left. ONLY EXECUTE AFTER RESTARTING THE BOT.'''
+        admin_commands = '''-> /check_pending : Use this to check for any pending orders left. ONLY EXECUTE AFTER RESTARTING THE BOT.
+        -> /clear_withdrawal_state_all: remove all users from withdrawal state: EXECUTE ONLY AFTER RESTARTING.
+        -> /clear_withdrawal_state <userid>: remove a specific user from withdrawal state, execute only if the user is stuck.
+        -> /display_all_games: displays all current ongoing games
+        -> /cancel_order <uniqid>: cancel a specific sellix order
+        -> /show_balance <userid>: shows balance
+        -> /show_balance_all: shows all balances above 0.
+                            '''
         context.bot.send_message(chat_id=user_id, text=admin_commands)
     else:
         context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
@@ -192,27 +244,140 @@ def check_pending(update:Update, context: CallbackContext):
             context.bot.send_message(chat_id=user_id,text="No pending orders found")
     else:
         context.bot.send_message(chat_id=user_id, text=f"You are not authorized to use this command.")
-def reply_mainmenu(update:Update,context:CallbackContext):
-    query = update.callback_query
-    query.answer()
-    username = update.effective_user.username
-    userid = update.effective_user.id
-    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
 
-    balancedb.add_entry(userid,username)
-    keyboard = [
-        [InlineKeyboardButton("💲Deposit", callback_data='deposit'),
-        InlineKeyboardButton("💵Withdraw", callback_data='withdraw')],
-        [InlineKeyboardButton("💸Balance", callback_data='balance')],
-        [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
-        ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(chat_id=userid,text=welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+def clear_withdrawal_state_all(update: Update, context: CallbackContext):
+    """Clears all withdrawal state records if the user is an admin."""
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
 
+    withdrawalstate.clear_withdrawal_state()
+    update.message.reply_text("All withdrawal states have been cleared.")
+
+def clear_withdrawal_state(update: Update, context: CallbackContext):
+    """Clears the withdrawal state for a specific user ID if the requester is an admin."""
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
+
+    try:
+        target_user_id = int(context.args[0])
+    except (IndexError, ValueError):
+        update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    if withdrawalstate.remove_record(target_user_id):
+        update.message.reply_text(f"Withdrawal state for user ID {target_user_id} has been removed.")
+    else:
+        update.message.reply_text("No record found for the specified user ID.")
+def display_all_games(update: Update, context: CallbackContext):
+    """Displays all ongoing games in one message, formatted as specified."""
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
+
+    games_json = ongoing.get_all_games_as_json()
+    if not games_json or games_json == '[]':
+        update.message.reply_text("No ongoing games found.")
+        return
+
+    games = json.loads(games_json)
+    message_lines = []
+
+    for game in games:
+        game_details = f"Game ID: <code>{game['game_id']}</code>\nUsername: <code>{game['username']}</code>\nAmount: $<code>{game['bet_amount']}</code>\nUser ID: <code>{game['user_id']}</code>\n\n"
+        message_lines.append(game_details)
+
+    message = "".join(message_lines).strip()
+
+    # Check if message exceeds the Telegram limit, and if so, indicate that not all games could be listed
+    if len(message) > 4096:
+        message = message[:4090] + "..."
+
+    update.message.reply_text(message,parse_mode=ParseMode.HTML)
+def admin_cancel_order(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
+
+    if not context.args:
+        update.message.reply_text("Please provide the unique ID of the order to cancel.")
+        return
+
+    uniqid = context.args[0]
+    status, err = delete_sellix_order(SELLIX_API, uniqid)
+    
+    reply_markup = None  # Define your reply markup here if needed
+    
+    if status:
+        update.message.reply_text(f"<b>Order <code>{uniqid}</code> has been cancelled ✅</b>", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+        jobsdb.remove_job(uniqid)
+    else:
+        update.message.reply_text(f"<b>Order Cancellation failed, Error: {err}</b>", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+
+def check_balance(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
+
+    if not context.args:
+        update.message.reply_text("Please provide a user ID to check the balance.")
+        return
+
+    try:
+        target_user_id = int(context.args[0])
+    except ValueError:
+        update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    balance_info = balancedb.get_balance(target_user_id)
+    if balance_info:
+        user_id, username, balance = balance_info
+        message = f"User ID: {user_id}\nUsername: {username}\nBalance: ${balance}"
+        update.message.reply_text(message)
+    else:
+        update.message.reply_text("This user does not exist.")
+def show_positive_balances(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you do not have permission to perform this action.")
+        return
+
+    positive_balances = balancedb.get_positive_balances()
+    if not positive_balances:
+        update.message.reply_text("No users with positive balances found.")
+        return
+
+    message_lines = ["Users with positive balances:\n"]
+    for user_id, username, amount in positive_balances:
+        line = f"User ID: {user_id}, Username: {username}, Balance: ${amount}"
+        message_lines.append(line)
+
+    # Concatenate all lines into a single message
+    message = "\n".join(message_lines)
+    
+    # Telegram's maximum message length is 4096 characters.
+    # If message exceeds this limit, consider sending it in chunks or summarizing.
+    if len(message) > 4096:
+        message = message[:4090] + "... (message truncated due to length)"
+
+    update.message.reply_text(message)
+    
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
     updater.dispatcher.add_handler(CommandHandler('start',start,run_async=True))
+    dispatcher.add_handler(CommandHandler('clear_withdrawal_state_all', clear_withdrawal_state_all,run_async=True))
+    dispatcher.add_handler(CommandHandler('clear_withdrawal_state', clear_withdrawal_state, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler('display_all_games', display_all_games,run_async=True))
+    dispatcher.add_handler(CommandHandler('cancel_order', admin_cancel_order, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler('show_balance', check_balance, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler('show_balance_all', show_positive_balances,run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$',run_async=True))
@@ -284,7 +449,40 @@ def main() -> None:
     },
     fallbacks=[],
 )
+    updater.dispatcher.add_handler(CallbackQueryHandler(show_coins,pattern='^withdraw$',run_async=True))
     dispatcher.add_handler(conversation_handler6)
+    '''get_btc_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(withdraw_btc,pattern='^withdraw_btc1$',run_async=True)],
+        states={
+            GET_WITHDRAW_AMOUNT_BTC: [MessageHandler(Filters.text & ~Filters.command, get_amount_btc,run_async=True)],
+            GET_BTC_ADDRESS: [MessageHandler(Filters.text & ~Filters.command,get_address_btc,run_async=True)]
+        },
+        fallbacks=[]
+    )'''
+    #updater.dispatcher.add_handler(CallbackQueryHandler(process_btc,pattern='^process_btc$',run_async=True))
+    #dispatcher.add_handler(get_btc_conv)
+    updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main_withdraw,pattern='^mainmenu_withdraw$',run_async=True))
+    get_ltc_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(withdraw_ltc,pattern='^withdraw_ltc$',run_async=True)],
+        states={
+            GET_WITHDRAW_AMOUNT_LTC: [MessageHandler(Filters.text & ~Filters.command, get_amount_ltc,run_async=True)],
+            GET_LTC_ADDRESS: [MessageHandler(Filters.text & ~Filters.command,get_address_ltc,run_async=True)]
+        },
+        fallbacks=[CallbackQueryHandler(cancel_withdrawal,pattern='^cancel_withdrawal$',run_async=True)]
+    )
+    updater.dispatcher.add_handler(CallbackQueryHandler(process_ltc,pattern='^process_ltc$',run_async=True))
+    dispatcher.add_handler(get_ltc_conv)
+    get_eth_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(withdraw_eth,pattern='^withdraw_eth$',run_async=True)],
+        states={
+            GET_WITHDRAW_AMOUNT_ETH: [MessageHandler(Filters.text & ~Filters.command, get_amount_eth,run_async=True)],
+            GET_ETH_ADDRESS: [MessageHandler(Filters.text & ~Filters.command,get_address_eth,run_async=True)]
+        },
+        fallbacks=[CallbackQueryHandler(cancel_withdrawal,pattern='^cancel_withdrawal$',run_async=True)]
+    )
+    updater.dispatcher.add_handler(CallbackQueryHandler(process_eth,pattern='^process_eth$',run_async=True))
+    dispatcher.add_handler(get_eth_conv)
+    updater.dispatcher.add_handler(CallbackQueryHandler(abort_withdrawal,pattern='^abort_withdrawal$'))
     updater.start_polling()
     print("Polling...")
     updater.idle()

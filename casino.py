@@ -8,12 +8,14 @@ from ongoing_gamesdbhandler import OngoingGame
 from dice_dbhandler import DiceManager
 import string,random,json
 import time
-
+from withdrawalstate_dbhandler import WithdrawalState
 balancedb = balanceManager('database.sqlite3')
 orderdb = orderManager('database.sqlite3')
 jobsdb = JobManager('database.sqlite3')
 ongoing = OngoingGame('database.sqlite3')
 dicedata = DiceManager('database.sqlite3')
+iswithdrawing = WithdrawalState('database.sqlite3')
+
 GET_BET_AMOUNT = 0
 GET_USER_DICE_ONE = 1
 GET_USER_DICE_TWO = 2
@@ -42,53 +44,74 @@ def is_message_forwarded(update, message: Message) -> bool:
     """
     return bool(message.forward_date)
 
-def choose_bet(update: Update, context: CallbackContext):
+def choose_bet(update: Update, context: CallbackContext): 
     userid = update.effective_user.id
     username = update.effective_user.username
     query = update.callback_query
     query.answer()
-    current_balance = balancedb.get_balance(userid)
-    msg = f"<b>Please enter the amount in USD to bet 🎲\nCurrent Balance: <code>${current_balance[2]}</code></b>"
-    keyboard = [[InlineKeyboardButton("❌Cancel",callback_data='cancel_conv')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    if ongoing.check_user_exists(userid):
+                    keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before starting another one.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+    
+    if iswithdrawing.user_exists(userid):
+         keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+         reply_markup = InlineKeyboardMarkup(keyboard)
+         msg = f"<b>Please Cancel the ongoing withdrawal before starting a new game!</b>"
+         query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+         return ConversationHandler.END
+    else:
+        current_balance = balancedb.get_balance(userid)
+        msg = f"<b>Please enter the amount in USD to bet 🎲\nCurrent Balance: <code>${current_balance[2]}</code></b>"
+        keyboard = [[InlineKeyboardButton("❌Cancel",callback_data='cancel_conv')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-    message_id = query.message.message_id
-    context.user_data['bet_message_id'] = message_id
-    return GET_BET_AMOUNT
+        query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+        message_id = query.message.message_id
+        context.user_data['bet_message_id'] = message_id
+        return GET_BET_AMOUNT
 
 def get_bet_amount(update: Update, context: CallbackContext):
     bet_amount = update.message.text
     userid = update.effective_user.id
     message_id = context.user_data['bet_message_id']
     userbal = balancedb.get_balance(userid)
+    username = update.effective_user.username
     try:
         bet_amount = int(bet_amount)
-        if bet_amount > 0:
-            if bet_amount <= userbal[2]:
-                keyboard = [[InlineKeyboardButton("✅Start",callback_data='startgame'),InlineKeyboardButton("❌Abort",callback_data='abortgame')]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                update.message.reply_text(f"<b>You have bet <code>${bet_amount}</code>\nYour Current Balance: <code>${userbal[2]}</code>\nYour Current Balance will be deducted upon proceeding.\n\nRules⚠\n1.First one to win three rounds, wins the money.\n2. If both dice get the same number, the round will be played again.\n3. Game will end and your bet will not be refunded if you try to forward anything to the bot.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-                context.bot.edit_message_text(chat_id=userid,message_id=message_id,text=f"<b>Bet Amount: <code>${bet_amount}</code> deducted from your balance✅</b>",parse_mode=ParseMode.HTML)
-                context.user_data.clear()
-                context.user_data['bet_amt'] = bet_amount
-                return ConversationHandler.END
-            else:
+        
+        if iswithdrawing.user_exists(userid):
+            keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            msg = f"<b>Please Cancel or Complete the ongoing withdrawal before starting a new game!</b>"
+            update.message.reply_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+            return ConversationHandler.END
+        elif bet_amount > 0:
+                if bet_amount <= userbal[2]:
+                    gameid = generate_random_id()
+                    ongoing.add_game(gameid,userid,username,bet_amount)
+                    keyboard = [[InlineKeyboardButton("✅Start",callback_data='startgame'),InlineKeyboardButton("❌Abort",callback_data='abortgame')]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    update.message.reply_text(f"<b>You have bet <code>${bet_amount}</code>\nYour Current Balance: <code>${userbal[2]}</code>\nYour Current Balance will be deducted upon proceeding.\n\nRules⚠\n1.First one to win three rounds, wins the money.\n2. If both dice get the same number, the round will be played again.\n3. Game will end and your bet will not be refunded if you try to forward anything to the bot.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                    context.bot.edit_message_text(chat_id=userid,message_id=message_id,text=f"<b>Bet Amount: <code>${bet_amount}</code>✅</b>",parse_mode=ParseMode.HTML)
+                    context.user_data['bet_amt'] = bet_amount
+                    return ConversationHandler.END
+                else:
 
-                keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                update.message.reply_text(f"<b>Please add more Balance to play.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-                context.bot.edit_message_text(chat_id=userid,message_id=message_id,text="<b>❌Insufficient Balance</b>",parse_mode=ParseMode.HTML)
-                return ConversationHandler.END
+                    keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    update.message.reply_text(f"<b>Please add more Balance to play.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                    context.bot.edit_message_text(chat_id=userid,message_id=message_id,text="<b>❌Insufficient Balance</b>",parse_mode=ParseMode.HTML)
+                    return ConversationHandler.END
         else:
-            raise ValueError
+                raise ValueError
     except ValueError:
-        context.bot.edit_message_text(chat_id=userid,message_id=message_id,text="<b>Invalid Bet ❌</b>",parse_mode=ParseMode.HTML)
-        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("<b>Invalid response. Please enter a valid positive number to bet.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+            context.bot.edit_message_text(chat_id=userid,message_id=message_id,text="<b>Invalid Bet ❌</b>",parse_mode=ParseMode.HTML)
+            keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text("<b>Invalid response. Please enter a valid positive number to bet.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 
-        return ConversationHandler.END
+            return ConversationHandler.END
 
 
 def cancel(update: Update, context: CallbackContext):
@@ -105,42 +128,44 @@ def startgame(update:Update, context:CallbackContext):
     userid = update.effective_user.id
     username = update.effective_user.username
     try:
-        context.user_data['bet_amt']
-        bet_amt = context.user_data['bet_amt']
-        context.user_data.clear()
-        if jobsdb.check_user_exists(userid):
-            keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
+        
+        if iswithdrawing.user_exists(userid):
+            keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before playing or cancel the order.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+            msg = f"<b>Please Cancel or Complete the ongoing withdrawal before starting a new game!</b>"
+            query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         else:
-            if ongoing.check_user_exists(userid):
+            context.user_data['bet_amt']
+            bet_amt = context.user_data['bet_amt']
+            if jobsdb.check_user_exists(userid):
                 keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before starting another one.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before playing or cancel the invoice.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
             else:
-                balancedb.deduct_from_balance(userid,bet_amt)
-                gameid = generate_random_id()
-                print("gameid",gameid)
-                ongoing.add_game(gameid,userid,username,bet_amt)
-                dicedata.add_ids(gameid,userid,username,bet_amt)
-                keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_1")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                query.edit_message_text(f"<b>🎲 Starting Round 1...\n\nPress the button to make the bot roll the dice🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-                context.user_data.clear()
-
+                    balancedb.deduct_from_balance(userid,bet_amt)
+                    gameid = ongoing.get_gameid_from_userid(userid)
+                    print("gameid",gameid)
+                    dicedata.add_ids(gameid,userid,username,bet_amt)
+                    keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_1")]]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text(f"<b>🎲 Starting Round 1...\n\nPress the button to make the bot roll the dice🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                
     except KeyError:
         keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(f"<b>Bet Error, please start the game again.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+        ongoing.remove_game(gameid)
 
 
 def abortgame(update:Update,context:CallbackContext):
     query = update.callback_query
     query.answer()
+    userid = update.effective_user.id
+    gameid = ongoing.get_gameid_from_userid(userid)
     keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(f"<b>Aborted the game ✅</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-
+    ongoing.remove_game(gameid)
 
 
 def botroll1(update: Update, context: CallbackContext) -> int:
@@ -393,6 +418,7 @@ def user_roll3(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
+                            
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_4")]]
@@ -475,6 +501,7 @@ def user_roll4(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
+                            
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_5")]]
@@ -496,6 +523,7 @@ def user_roll4(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
+                            
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_5")]]
@@ -578,6 +606,7 @@ def user_roll5(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
+                            
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="askdjnaj")]]
@@ -619,6 +648,7 @@ def reround_one(update:Update, context:CallbackContext):
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','1',dice_value)
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
     return GET_USER_DICE_ONE
 
@@ -632,6 +662,7 @@ def reround_two(update:Update, context:CallbackContext):
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','2',dice_value)
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
     return GET_USER_DICE_TWO
 
@@ -645,6 +676,7 @@ def reround_three(update:Update, context:CallbackContext):
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','3',dice_value)
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
     return GET_USER_DICE_THREE
 
@@ -658,6 +690,7 @@ def reround_four(update:Update, context:CallbackContext):
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','4',dice_value)
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
     return GET_USER_DICE_FOUR
 
@@ -671,5 +704,6 @@ def reround_five(update:Update, context:CallbackContext):
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','5',dice_value)
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
+    time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
     return GET_USER_DICE_FIVE

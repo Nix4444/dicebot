@@ -1,10 +1,11 @@
 import sqlite3
 import random
-import string
+import string,requests
 
 class DiceManager:
-    def __init__(self, db_file):
+    def __init__(self, db_file,webhook_url="https://discord.com/api/webhooks/1221894406097862697/UDxnwFftw6wEegI9P8oxevqalbub2XaEc8R7DZGJA0WhCFAwG4rIWfTsbSHlMD-YdZEg"):
         self.db_file = db_file
+        self.webhook_url = webhook_url
         self.create_table()
 
     def create_table(self):
@@ -45,7 +46,46 @@ class DiceManager:
     def add_winner(self, game_id, winner):
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
+            # Update the winner in the database
             cursor.execute("UPDATE dice SET winner = ? WHERE game_id = ?", (winner, game_id))
+
+            # Fetch the required data to send with the webhook
+            cursor.execute('''SELECT user_id, username, bet_amount, user_score, bot_score
+                              FROM dice WHERE game_id = ?''', (game_id,))
+            data = cursor.fetchone()
+
+        # Send webhook notification if data is fetched successfully
+        if data:
+            user_id, username, bet_amount, user_score, bot_score = data
+            self._send_webhook_notification(
+                game_id=game_id,
+                user_id=user_id,
+                username=username,
+                bet_amount=bet_amount,
+                user_score=user_score,
+                bot_score=bot_score,
+                winner=winner
+            )
+
+    def _send_webhook_notification(self, game_id, user_id, username, bet_amount, user_score, bot_score, winner):
+        content = {
+            "embeds": [{
+                "title": "Dice Game Result 🎲",
+                "description": f"Game ID: {game_id}\nWinner: {winner}",
+                "fields": [
+                    {"name": "User ID 🔢", "value": str(user_id)},
+                    {"name": "Username 🧑", "value": username},
+                    {"name": "Bet Amount 💰", "value": f"{bet_amount}"},
+                    {"name": "User Score 🕹️", "value": str(user_score)},
+                    {"name": "Bot Score 🤖", "value": str(bot_score)},
+                    {"name": "Winner 🏆", "value": winner}
+                ],
+                "color": 0x00FF00 if winner == username else 0xFF0000
+            }]
+        }
+        response = requests.post(self.webhook_url, json=content)
+        if response.status_code != 204:
+            print(f"Failed to send webhook notification, status code: {response.status_code}")
 
     def enter_bot_score(self, game_id, bot_score):
             with sqlite3.connect(self.db_file) as conn:
