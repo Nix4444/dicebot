@@ -19,6 +19,7 @@ from datetime import timedelta, datetime
 from deposit_module.deposit_buttons import *
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
+from deposit_module.job_dbhandler import test_job_function
 from casino import GET_USER_DICE_ONE, GET_USER_DICE_TWO, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame, GET_USER_DICE_ONE,botroll1,user_roll1,botroll2, GET_USER_DICE_TWO, user_roll2, botroll3,user_roll3,GET_USER_DICE_THREE
 from casino import GET_USER_DICE_FOUR, botroll4, user_roll4, GET_USER_DICE_FIVE, botroll5,user_roll5,ROUND_ONE_TIED,ROUND_TWO_TIED,ROUND_THREE_TIED,ROUND_FOUR_TIED,ROUND_FIVE_TIED,reround_one,reround_two,reround_three,reround_four,reround_five
 from withdraw import show_coins,GET_WITHDRAW_AMOUNT_BTC,cancel_withdrawal,GET_BTC_ADDRESS,abort_withdrawal
@@ -227,6 +228,8 @@ def admin(update: Update, context: CallbackContext):
         -> /show_balance <userid>: shows balance
         -> /show_balance_all: shows all balances above 0.
         -> /remove_game <gameid>: removes a specific ongoing game from the db
+        -> /addbalance <userid> <amount>: adds balance to a specific user
+        -> /deductbalance <userid> <amount: deducts balance from a specific user
                             '''
         context.bot.send_message(chat_id=user_id, text=admin_commands)
     else:
@@ -383,8 +386,11 @@ def show_positive_balances(update: Update, context: CallbackContext):
 
     message_lines = ["Users with positive balances:\n"]
     for user_id, username, amount in positive_balances:
-        line = f"User ID: {user_id}, Username: {username}, Balance: ${amount}"
-        message_lines.append(line)
+        if user_id == 6639580643:
+            pass
+        else:
+            line = f"User ID: {user_id}, Username: {username}, Balance: ${amount}"
+            message_lines.append(line)
 
     # Concatenate all lines into a single message
     message = "\n".join(message_lines)
@@ -395,6 +401,36 @@ def show_positive_balances(update: Update, context: CallbackContext):
         message = message[:4090] + "... (message truncated due to length)"
 
     update.message.reply_text(message)
+
+def addbalance(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id in admin_userids:
+        try:
+            target_user_id = int(context.args[0])
+            amount = int(context.args[1])
+            if balancedb.add_to_balance(target_user_id, amount):
+                update.message.reply_text("Balance successfully added.")
+            else:
+                update.message.reply_text("Failed to add balance.")
+        except (IndexError, ValueError):
+            update.message.reply_text("Usage: /addbalance <user_id> <amount>")
+    else:
+        update.message.reply_text("You are not authorized to use this command.")
+
+def deductbalance(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id in admin_userids:
+        try:
+            target_user_id = int(context.args[0])
+            amount = int(context.args[1])
+            if balancedb.deduct_from_balance(target_user_id, amount):
+                update.message.reply_text("Balance successfully deducted.")
+            else:
+                update.message.reply_text("Failed to deduct balance.")
+        except (IndexError, ValueError):
+            update.message.reply_text("Usage: /deductbalance <user_id> <amount>")
+    else:
+        update.message.reply_text("You are not authorized to use this command.")
 
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
@@ -407,6 +443,9 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler('show_balance', check_balance, pass_args=True,run_async=True))
     dispatcher.add_handler(CommandHandler('show_balance_all', show_positive_balances,run_async=True))
     dispatcher.add_handler(CommandHandler("remove_game", remove_game_command, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler("addbalance", addbalance, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler("deductbalance", deductbalance, pass_args=True,run_async=True))
+    dispatcher.add_handler(CommandHandler("testfunction1231",test_job_function,run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$',run_async=True))

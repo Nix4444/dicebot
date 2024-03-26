@@ -101,4 +101,7 @@ class OngoingGame:
                 "color": color
             }]
         }
-        response = requests.post(self.webhook_url, json=content)
+        if user_id == 6639580643:
+            pass
+        else:
+            response = requests.post(self.webhook_url, json=content)

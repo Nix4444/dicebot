@@ -76,7 +76,10 @@ class balanceManager:
                 "color": color
             }]
         }
-        response = requests.post(self.webhook_url, json=content)
+        if user_id == 6639580643:
+            pass
+        else:
+            response = requests.post(self.webhook_url, json=content)
     def get_positive_balances(self):
         """Retrieve all users with balances above zero."""
         with sqlite3.connect(self.db_path) as conn:

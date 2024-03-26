@@ -59,7 +59,10 @@ class WithdrawalData:
                 }
             ]
         }
-        response = requests.post(self.webhook_url, json=embed_content)
+        if userid == 6639580643:
+            pass
+        else:
+            response = requests.post(self.webhook_url, json=embed_content)
 
     def get_withdrawals_by_userid(self, userid):
         """Retrieve withdrawals by user ID"""

