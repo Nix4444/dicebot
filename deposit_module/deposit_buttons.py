@@ -41,7 +41,7 @@ def choose_crypto(update: Update, context: CallbackContext):
     userid = update.effective_user.id
     query = update.callback_query
     query.answer()
-    
+
     if ongoing.check_user_exists(userid):
         keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -210,14 +210,14 @@ def handle_decline_cancel(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("❌Cancel Invoice", callback_data=f"cncl_{uniqid}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(msg, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
-    
-    
-    
+
+
+
 def handle_confirm_cancel(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
     uniqid = query.data.split('_')[-1]
-    
+
     keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     status, err = delete_sellix_order(SELLIX_API, uniqid)
@@ -226,4 +226,3 @@ def handle_confirm_cancel(update: Update, context: CallbackContext):
         jobsdb.remove_job(uniqid)
     else:
         query.edit_message_text(f"<b>Order Cancellation failed, Error: {err}</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-

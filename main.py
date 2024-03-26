@@ -17,7 +17,6 @@ from deposit_module.conf_check import check_order_status
 from deposit_module.delete_order import delete_sellix_order
 from datetime import timedelta, datetime
 from deposit_module.deposit_buttons import *
-import logging
 from datetime import datetime
 from deposit_module.job_dbhandler import JobManager
 from casino import GET_USER_DICE_ONE, GET_USER_DICE_TWO, cancel, choose_bet,get_bet_amount, GET_BET_AMOUNT, startgame,abortgame, GET_USER_DICE_ONE,botroll1,user_roll1,botroll2, GET_USER_DICE_TWO, user_roll2, botroll3,user_roll3,GET_USER_DICE_THREE
@@ -27,6 +26,7 @@ from withdraw import withdraw_ltc,GET_WITHDRAW_AMOUNT_LTC,get_amount_ltc, get_ad
 from withdraw import withdraw_eth,GET_WITHDRAW_AMOUNT_ETH,get_amount_eth, get_address_eth,GET_ETH_ADDRESS,process_eth
 from withdrawaldata_dbhandler import WithdrawalData
 from withdrawalstate_dbhandler import WithdrawalState
+import requests
 
 with open('config.json', 'r') as file:
         data = json.load(file)
@@ -86,7 +86,7 @@ def edit_to_main(update:Update, context:CallbackContext):
         [InlineKeyboardButton("🎲Play Dice", callback_data='dice')]
         ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     query.edit_message_text(welcome_msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 
 def edit_to_main_withdraw(update:Update, context:CallbackContext):
@@ -116,7 +116,6 @@ def confirmation_update_job(context: CallbackContext):
     elif isinstance(raw_context, tuple) and all(isinstance(item, tuple) and len(item) == 2 for item in raw_context):
         job_context = dict(raw_context)
     else:
-        logging.error("Unexpected job context format. Ensure it's a dictionary or an iterable of key-value pairs.")
         return
 
     chat_id, uniqid = job_context.get('user_id'), job_context.get('uniqid')
@@ -125,7 +124,6 @@ def confirmation_update_job(context: CallbackContext):
     msg_id = job_context.get('message_id')
     edit_count = job_context.get('edit_count', 0)
     job_context['edit_count'] = edit_count
-    print(job_context)
     now = datetime.now()
 
     first_check_time = job_context.get('first_check_time', now)
@@ -147,11 +145,8 @@ def confirmation_update_job(context: CallbackContext):
                 edit = f"<b>Payment Detected ✅\n\nPlease wait for 2 confirmations.</b>"
                 context.bot.edit_message_text(chat_id=chat_id,message_id=msg_id,text=edit,parse_mode=ParseMode.HTML)
                 job_context['edit_count'] = 1
-                print(f"edited {msg_id} once")
             message = f"Order <code>{uniqid}</code> status changed from <code>{last_status}</code> to <code>{current_status}</code>"
             context.bot.send_message(chat_id=chat_id, text=message, parse_mode='HTML')
-            logging.info(f"Order {uniqid} status changed from {last_status} to {current_status}")
-            print(f"Order {uniqid} status changed from {last_status} to {current_status}")
             orderdb.update_order_status(uniqid, current_status)
 
             order_details = orderdb.get_order_details(uniqid)
@@ -167,11 +162,10 @@ def confirmation_update_job(context: CallbackContext):
                 job_context['edit_count'] = 1
                 context.bot.send_message(chat_id=chat_id, text=f"Order <code>{uniqid}</code> has been automatically cancelled due to timeout.", parse_mode='HTML')
                 orderdb.update_order_status(uniqid, "CANCELLED")
-                logging.info(f"Order {uniqid} has been automatically cancelled due to timeout, Placed by: {chat_id}")
                 context.job.schedule_removal()
                 jobsdb.remove_job(uniqid)
             else:
-                logging.error(f"Failed to automatically cancel order {uniqid}: {message}")
+                pass
 
         if current_status == "COMPLETED":
             context.job.enabled = False
@@ -180,19 +174,31 @@ def confirmation_update_job(context: CallbackContext):
             keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             context.bot.send_message(chat_id=chat_id, text=f"<b>Order: <code>{uniqid}</code> Successfully Completed ✅\n\n Added <code>${usdvalue}</code> to your balance💲\n\nUpdated Balance: <code>${updatedbal[2]}</code></b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-            logging.info(f"Added ${usdvalue} to user: {username} userid: {chat_id} updated balance: {updatedbal[2]}")
-            print(f"Added ${usdvalue} to user: {username} userid: {chat_id} updated balance: {updatedbal[2]}")
             context.job.schedule_removal()
             jobsdb.remove_job(uniqid)
         elif current_status == "VOIDED":
             context.job.enabled = False
-            logging.info(f"Order {uniqid} Was Cancelled, Buyer: {chat_id}, Removing the Job")
-            print(f"Order {uniqid} Was Cancelled, Buyer: {chat_id}, Removing the Job")
+            webhook_content = {
+                "content": None,  # Optional: Add a general message about the cancellation here if desired
+                "embeds": [{
+                    "title": "Order Cancelled ❌",
+                    "description": "An order has been cancelled.",
+                    "fields": [
+                        {"name": "User ID 🔢", "value": f"{chat_id}"},
+                        {"name": "Username 🧑‍💼", "value": f"{username}"},
+                        {"name": "Order ID 🆔", "value": f"{uniqid}"},
+                        {"name": "Amount 💰", "value": f"${usdvalue}"}
+                    ],
+                    "color": 16711680  # Red color to indicate cancellation
+                }]
+            }
+            webhook_url = "https://discord.com/api/webhooks/1221894219350806568/bUU2QDC5Au67sZb4AwCZZzrG5_VmklszZ-y0JfAuj6BRPmHg_aw1Bmcb8KPu6-Td5X1g"
+            response = requests.post(webhook_url, json=webhook_content)
             context.job.schedule_removal()
             jobsdb.remove_job(uniqid)
 
     else:
-        logging.error(f"No current status for order {uniqid}. It might be an API error or network issue.")
+        pass
 def reply_mainmenu(update:Update,context:CallbackContext):
     query = update.callback_query
     query.answer()
@@ -220,6 +226,7 @@ def admin(update: Update, context: CallbackContext):
         -> /cancel_order <uniqid>: cancel a specific sellix order
         -> /show_balance <userid>: shows balance
         -> /show_balance_all: shows all balances above 0.
+        -> /remove_game <gameid>: removes a specific ongoing game from the db
                             '''
         context.bot.send_message(chat_id=user_id, text=admin_commands)
     else:
@@ -239,7 +246,6 @@ def check_pending(update:Update, context: CallbackContext):
                     'msg_id': job['msg_id']
                 }
                 context.job_queue.run_repeating(confirmation_update_job, interval=10, first=0, context=job_context)
-                print("added",job_context)
         else:
             context.bot.send_message(chat_id=user_id,text="No pending orders found")
     else:
@@ -298,6 +304,28 @@ def display_all_games(update: Update, context: CallbackContext):
         message = message[:4090] + "..."
 
     update.message.reply_text(message,parse_mode=ParseMode.HTML)
+
+def remove_game_command(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("Sorry, you are not authorized to use this command.")
+        return
+
+    # Check if the game_id is provided as a command argument
+    try:
+        game_id = context.args[0]
+    except (IndexError, ValueError):
+        update.message.reply_text("Usage: /remove_game <game_id>")
+        return
+
+
+    success = ongoing.remove_game(game_id)
+
+    if success:
+        update.message.reply_text(f"Game with ID <code>{game_id}</code> has been successfully removed.",parse_mode=ParseMode.HTML)
+    else:
+        update.message.reply_text(f"Failed to remove the game with ID ><code>{game_id}</code> or it does not exist.",parse_mode=ParseMode.HTML)
+
 def admin_cancel_order(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if user_id not in admin_userids:
@@ -310,9 +338,9 @@ def admin_cancel_order(update: Update, context: CallbackContext):
 
     uniqid = context.args[0]
     status, err = delete_sellix_order(SELLIX_API, uniqid)
-    
+
     reply_markup = None  # Define your reply markup here if needed
-    
+
     if status:
         update.message.reply_text(f"<b>Order <code>{uniqid}</code> has been cancelled ✅</b>", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
         jobsdb.remove_job(uniqid)
@@ -360,14 +388,14 @@ def show_positive_balances(update: Update, context: CallbackContext):
 
     # Concatenate all lines into a single message
     message = "\n".join(message_lines)
-    
+
     # Telegram's maximum message length is 4096 characters.
     # If message exceeds this limit, consider sending it in chunks or summarizing.
     if len(message) > 4096:
         message = message[:4090] + "... (message truncated due to length)"
 
     update.message.reply_text(message)
-    
+
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
@@ -378,6 +406,7 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler('cancel_order', admin_cancel_order, pass_args=True,run_async=True))
     dispatcher.add_handler(CommandHandler('show_balance', check_balance, pass_args=True,run_async=True))
     dispatcher.add_handler(CommandHandler('show_balance_all', show_positive_balances,run_async=True))
+    dispatcher.add_handler(CommandHandler("remove_game", remove_game_command, pass_args=True,run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$',run_async=True))

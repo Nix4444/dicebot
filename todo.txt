@@ -1,5 +1,1 @@
-eth withdrawal fee $2
-merge qr code and order msg into one
-fix /checpending command
-add a remove game command for admins
-remove unnecessary print statements
+

@@ -58,9 +58,9 @@ def show_coins(update:Update,context:CallbackContext):
     keyboard = [[InlineKeyboardButton("Litecoin",callback_data='withdraw_ltc')],[InlineKeyboardButton("Ethereum",callback_data='withdraw_eth')],[InlineKeyboardButton("◀️Back", callback_data='mainmenu_withdraw')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-    
+
 '''def withdraw_btc(update:Update, context:CallbackContext):
-    
+
     userid = update.effective_user.id
     current_balance = balancedb.get_balance(userid)
     if jobsdb.check_user_exists(userid):
@@ -71,7 +71,7 @@ def show_coins(update:Update,context:CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
-        
+
         return ConversationHandler.END
     elif ongoing.check_user_exists(userid):
         query = update.callback_query
@@ -173,9 +173,9 @@ def get_address_btc(update:Update,context:CallbackContext):
         update.message.reply_text(f"<b>Unknown Error, please try withdrawing again.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
         return ConversationHandler.END
-            
 
-            
+
+
 def process_btc(update:Update,context:CallbackContext):
     userid = update.effective_user.id
     query = update.callback_query
@@ -188,14 +188,14 @@ def process_btc(update:Update,context:CallbackContext):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before withdrawing or cancel the invoice.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
             iswithdrawing.remove_record(userid)
-            
+
         else:
             if ongoing.check_user_exists(userid):
                 keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before withdrawing money.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                 iswithdrawing.remove_record(userid)
-                
+
             else:
                 keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -222,11 +222,11 @@ def transact_btc(update:Update,context:CallbackContext,amount,addy):
     query = update.callback_query
     query.answer()
     print("processing: ",amount, addy)'''
-    
+
 
 
 def withdraw_ltc(update:Update, context:CallbackContext):
-    
+
     userid = update.effective_user.id
     current_balance = balancedb.get_balance(userid)
     if jobsdb.check_user_exists(userid):
@@ -237,7 +237,7 @@ def withdraw_ltc(update:Update, context:CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
-        
+
         return ConversationHandler.END
     elif ongoing.check_user_exists(userid):
         query = update.callback_query
@@ -339,9 +339,9 @@ def get_address_ltc(update:Update,context:CallbackContext):
         update.message.reply_text(f"<b>Unknown Error, please try withdrawing again.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
         return ConversationHandler.END
-            
 
-            
+
+
 def process_ltc(update:Update,context:CallbackContext):
     userid = update.effective_user.id
     query = update.callback_query
@@ -354,14 +354,14 @@ def process_ltc(update:Update,context:CallbackContext):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before withdrawing or cancel the invoice.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
             iswithdrawing.remove_record(userid)
-            
+
         else:
             if ongoing.check_user_exists(userid):
                 keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before withdrawing money.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                 iswithdrawing.remove_record(userid)
-                
+
             else:
                 keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -371,7 +371,7 @@ def process_ltc(update:Update,context:CallbackContext):
                     query.edit_message_text(text,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                     balancedb.deduct_from_balance(userid,amt_withdraw)
                     transact_ltc(update,context,amount=amt_withdraw,addy=ltc_address)
-                    
+
                     iswithdrawing.remove_record(userid)
                 else:
                     keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
@@ -381,7 +381,7 @@ def process_ltc(update:Update,context:CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(f"<b>Unknown Error, please try withdrawing again.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
-        
+
 def send_failed_transaction_notification(userid, username, addy, amount,coin):
     webhook_url = "https://discord.com/api/webhooks/1221894122848125129/7aSXxgI58XCdtdxMoeCCDCGZJmKofZrd6m_bBdbXvlXHM6OCuLUJvSIJlaQKqtcK84cb"  # Replace with your actual webhook URL
     content = {
@@ -396,7 +396,7 @@ def send_failed_transaction_notification(userid, username, addy, amount,coin):
                 {"name": "Amount 💰", "value": f"{amount}"},
                 {"name": "Coin 🪙", "value": coin}
             ],
-            "color": 0xFF0000  
+            "color": 0xFF0000
         }]
     }
     response = requests.post(webhook_url, json=content)
@@ -417,6 +417,7 @@ def transact_ltc(update:Update,context:CallbackContext,amount,addy):
                         parse_mode=ParseMode.HTML
                     )
         withdrawaldb.insert_withdrawal(userid,username,amount,coin="LTC",address=addy,hash_value=hash)
+        iswithdrawing.remove_record(userid)
     else:
         context.bot.send_message(
                         chat_id=userid,
@@ -425,10 +426,11 @@ def transact_ltc(update:Update,context:CallbackContext,amount,addy):
                     )
         balancedb.add_to_balance(userid,amount)
         send_failed_transaction_notification(userid, username, addy, amount,coin="LTC")
-    
+        iswithdrawing.remove_record(userid)
+
 
 def withdraw_eth(update:Update, context:CallbackContext):
-    
+
     userid = update.effective_user.id
     current_balance = balancedb.get_balance(userid)
     if jobsdb.check_user_exists(userid):
@@ -439,7 +441,7 @@ def withdraw_eth(update:Update, context:CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
-        
+
         return ConversationHandler.END
     elif ongoing.check_user_exists(userid):
         query = update.callback_query
@@ -484,7 +486,7 @@ def get_amount_eth(update:Update, context:CallbackContext):
             return ConversationHandler.END
         else:
             if amt_withdraw >= 5:
-        
+
                 if amt_withdraw <= current_balance[2]:
                     keyboard = [[InlineKeyboardButton("❌ Cancel",callback_data='cancel_withdrawal')]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -531,7 +533,7 @@ def get_address_eth(update:Update,context:CallbackContext):
                 iswithdrawing.remove_record(userid)
                 return ConversationHandler.END
             else:
-                text = f"<b>⚙ Review your withdrawal details\n\nAmount: <code>${amt_withdraw}</code>\nETH Address: <code>{eth_address}</code></b>"
+                text = f"<b>⚙ Review your withdrawal details\n\nAmount: <code>${amt_withdraw}</code>\nETH Withdrawal Fee: <code>$2</code>\nETH Address: <code>{eth_address}</code></b>"
                 keyboard = [[InlineKeyboardButton("✅ Process Withdrawal",callback_data='process_eth'),InlineKeyboardButton("❌Abort",callback_data='abort_withdrawal')]]
                 reply_markup=InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(text,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
@@ -543,9 +545,9 @@ def get_address_eth(update:Update,context:CallbackContext):
         update.message.reply_text(f"<b>Unknown Error, please try withdrawing again.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
         iswithdrawing.remove_record(userid)
         return ConversationHandler.END
-            
 
-            
+
+
 def process_eth(update:Update,context:CallbackContext):
     userid = update.effective_user.id
     query = update.callback_query
@@ -558,14 +560,14 @@ def process_eth(update:Update,context:CallbackContext):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before withdrawing or cancel the invoice.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
             iswithdrawing.remove_record(userid)
-            
+
         else:
             if ongoing.check_user_exists(userid):
                 keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before withdrawing money.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                 iswithdrawing.remove_record(userid)
-                
+
             else:
                 keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -575,7 +577,7 @@ def process_eth(update:Update,context:CallbackContext):
                     query.edit_message_text(text,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                     balancedb.deduct_from_balance(userid,amt_withdraw)
                     transact_eth(update,context,amount=amt_withdraw,addy=eth_address)
-                    
+
                     iswithdrawing.remove_record(userid)
                 else:
                     keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
@@ -600,6 +602,7 @@ def transact_eth(update: Update, context: CallbackContext, amount, addy):
         w3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/229a95048da349249136c1d9b4af80c8'))
         tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         withdrawaldb.insert_withdrawal(userid,username,amount,coin="ETH",address=addy,hash_value=tx_hash.hex())
+        iswithdrawing.remove_record(userid)
         if tx_receipt.status == 1:
             context.bot.sendMessage(chat_id=userid, text=f"<b>Transaction <code>{tx_hash.hex()}</code> succeeded.</b>",parse_mode=ParseMode.HTML)
         elif tx_receipt.status == 0:
@@ -608,4 +611,4 @@ def transact_eth(update: Update, context: CallbackContext, amount, addy):
         context.bot.sendMessage(chat_id=userid,text=f"<b>Transaction failed ❌ Contact Support</b>",parse_mode=ParseMode.HTML)
         balancedb.add_to_balance(userid,amount)
         send_failed_transaction_notification(userid, username, addy, amount,coin="ETH")
-
+        iswithdrawing.remove_record(userid)

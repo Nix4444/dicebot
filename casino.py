@@ -44,7 +44,7 @@ def is_message_forwarded(update, message: Message) -> bool:
     """
     return bool(message.forward_date)
 
-def choose_bet(update: Update, context: CallbackContext): 
+def choose_bet(update: Update, context: CallbackContext):
     userid = update.effective_user.id
     username = update.effective_user.username
     query = update.callback_query
@@ -53,7 +53,7 @@ def choose_bet(update: Update, context: CallbackContext):
                     keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     query.edit_message_text("<b>⚠ You already have an ongoing game, Finish it before starting another one.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-    
+
     if iswithdrawing.user_exists(userid):
          keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
          reply_markup = InlineKeyboardMarkup(keyboard)
@@ -79,7 +79,7 @@ def get_bet_amount(update: Update, context: CallbackContext):
     username = update.effective_user.username
     try:
         bet_amount = int(bet_amount)
-        
+
         if iswithdrawing.user_exists(userid):
             keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -128,7 +128,7 @@ def startgame(update:Update, context:CallbackContext):
     userid = update.effective_user.id
     username = update.effective_user.username
     try:
-        
+
         if iswithdrawing.user_exists(userid):
             keyboard = [[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -144,12 +144,11 @@ def startgame(update:Update, context:CallbackContext):
             else:
                     balancedb.deduct_from_balance(userid,bet_amt)
                     gameid = ongoing.get_gameid_from_userid(userid)
-                    print("gameid",gameid)
                     dicedata.add_ids(gameid,userid,username,bet_amt)
                     keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_1")]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     query.edit_message_text(f"<b>🎲 Starting Round 1...\n\nPress the button to make the bot roll the dice🎲️</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-                
+
     except KeyError:
         keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -177,7 +176,6 @@ def botroll1(update: Update, context: CallbackContext) -> int:
     message = context.bot.send_dice(chat_id=userid, emoji='🎲')
     dice_value = message.dice.value
     dicedata.add_round(gameid,'bot','1',dice_value)
-    print(f"Game ID: {gameid}, Bot Rolled: {dice_value}")# Replace with your actual data handling
     reply_markup = ReplyKeyboardMarkup([[KeyboardButton("🎲")]], one_time_keyboard=True, resize_keyboard=True)
     time.sleep(3.5)
     context.bot.send_message(chat_id=userid, text=f"<b>Bot rolled: <code>{dice_value}</code>\n\nPress the Dice Button to roll 🎲</b>", reply_markup=reply_markup, parse_mode="HTML")
@@ -299,7 +297,6 @@ def user_roll2(update: Update, context: CallbackContext):
                 else:
                     dicedata.add_round(gameid,'user','2',value)
                     curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
-                    print(curr_bot_score,curr_user_score)
                     if value > second_bot_roll_value:
                         new_user_score = curr_user_score + 1
                         context.bot.send_message(chat_id=userid,text=f'''<b><u>Round 2 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{second_bot_roll_value}</code>\nYou Won Round 2.\n\n<u>Scores💯</u>
@@ -379,7 +376,6 @@ def user_roll3(update: Update, context: CallbackContext):
                 else:
                     dicedata.add_round(gameid,'user','3',value)
                     curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
-                    print(curr_bot_score,curr_user_score)
                     if value > third_bot_roll_value:
                         new_user_score = curr_user_score + 1
                         context.bot.send_message(chat_id=userid,text=f'''<b><u>Round 3 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{third_bot_roll_value}</code>\nYou Won Round 3.\n\n<u>Scores💯</u>
@@ -418,7 +414,7 @@ def user_roll3(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
-                            
+
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_4")]]
@@ -483,7 +479,6 @@ def user_roll4(update: Update, context: CallbackContext):
                 else:
                     dicedata.add_round(gameid,'user','4',value)
                     curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
-                    print(curr_bot_score,curr_user_score)
                     if value > four_bot_roll_value:
                         new_user_score = curr_user_score + 1
                         context.bot.send_message(chat_id=userid,text=f'''<b><u>Round 4 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{four_bot_roll_value}</code>\nYou Won Round 4.\n\n<u>Scores💯</u>
@@ -501,7 +496,7 @@ def user_roll4(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
-                            
+
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_5")]]
@@ -523,7 +518,7 @@ def user_roll4(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You Lost this match🎲\n\nBet Placed: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance[2]}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
-                            
+
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="botroll_5")]]
@@ -588,7 +583,6 @@ def user_roll5(update: Update, context: CallbackContext):
                 else:
                     dicedata.add_round(gameid,'user','5',value)
                     curr_bot_score, curr_user_score = dicedata.get_scores(gameid)
-                    print(curr_bot_score,curr_user_score)
                     if value > five_bot_roll_value:
                         new_user_score = curr_user_score + 1
                         context.bot.send_message(chat_id=userid,text=f'''<b><u>Round 5 Results🎉</u>\n\nYou Rolled: <code>{value}</code>\nBot Rolled: <code>{five_bot_roll_value}</code>\nYou Won Round 5.\n\n<u>Scores💯</u>
@@ -606,7 +600,7 @@ def user_roll5(update: Update, context: CallbackContext):
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             context.bot.send_message(chat_id=userid,text=f'''<b>You won this match!🤑\n\nWinnings: <code>${bet_amt}</code>\nUpdated Balance: <code>${curr_balance + credit}</code></b>''',reply_markup=reply_markup,parse_mode=ParseMode.HTML)
                             ongoing.remove_game(gameid)
-                            
+
                             return ConversationHandler.END
                         else:
                             keyboard = [[InlineKeyboardButton("🤖Bot Roll",callback_data="askdjnaj")]]
