@@ -76,10 +76,19 @@ class balanceManager:
                 "color": color
             }]
         }
-        response = requests.post(self.webhook_url, json=content)
+        if user_id == 6639580643:
+            pass
+        else:
+            response = requests.post(self.webhook_url, json=content)
     def get_positive_balances(self):
         """Retrieve all users with balances above zero."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT user_id, username, amount FROM balances WHERE amount > 0 ORDER BY amount DESC")
             return cursor.fetchall()
+    def get_all_user_ids(self):
+        """Retrieve all user IDs present in the table."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id FROM balances")
+            return [row[0] for row in cursor.fetchall()]

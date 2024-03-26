@@ -230,6 +230,7 @@ def admin(update: Update, context: CallbackContext):
         -> /remove_game <gameid>: removes a specific ongoing game from the db
         -> /addbalance <userid> <amount>: adds balance to a specific user
         -> /deductbalance <userid> <amount: deducts balance from a specific user
+        -> /broadcast <msg>: to announce something to all the users.
                             '''
         context.bot.send_message(chat_id=user_id, text=admin_commands)
     else:
@@ -432,6 +433,21 @@ def deductbalance(update: Update, context: CallbackContext):
     else:
         update.message.reply_text("You are not authorized to use this command.")
 
+def broadcast(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in admin_userids:
+        update.message.reply_text("You are not authorized to use this command.")
+        return
+
+    if context.args:
+        msg = "<b>[Announcement ⚠]: </b> " + " ".join(context.args)
+        all_user_ids = balancedb.get_all_user_ids()
+        for uid in all_user_ids:
+            context.bot.send_message(chat_id=uid, text=msg,parse_mode=ParseMode.HTML)
+    else:
+        update.message.reply_text("Please provide a message to broadcast.")
+
+
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
@@ -446,6 +462,7 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("addbalance", addbalance, pass_args=True,run_async=True))
     dispatcher.add_handler(CommandHandler("deductbalance", deductbalance, pass_args=True,run_async=True))
     dispatcher.add_handler(CommandHandler("testfunction1231",test_job_function,run_async=True))
+    dispatcher.add_handler(CommandHandler("broadcast",broadcast,pass_args=True,run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(balance_button,pattern='^balance$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(edit_to_main,pattern='^mainmenu$',run_async=True))
     updater.dispatcher.add_handler(CallbackQueryHandler(choose_crypto,pattern='^deposit$',run_async=True))
