@@ -3,3 +3,5 @@ bitcoin-utils
 litecoin-utils
 blockcypher
 qrcode
+requests
+python-telegram-bot==13.13

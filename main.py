@@ -39,7 +39,7 @@ orderdb = orderManager('database.sqlite3')
 jobsdb = JobManager('database.sqlite3')
 withdrawaldb = WithdrawalData('database.sqlite3')
 withdrawalstate = WithdrawalState('database.sqlite3')
-admin_userids = [5455454489]
+admin_userids = [5455454489,6553478744]
 UNIQID_INDEX = 0
 USER_ID_INDEX = 1
 USERNAME_INDEX = 2
@@ -51,7 +51,7 @@ HASH_INDEX = 6
 def start(update: Update, context: CallbackContext) -> None:
     username = update._effective_user.username
     userid = update.effective_user.id
-    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+    welcome_msg = f"<b>Welcome @{username} to DiceFo Bot!</b>"
 
     balancedb.add_entry(userid,username)
     keyboard = [
@@ -77,7 +77,7 @@ def edit_to_main(update:Update, context:CallbackContext):
     query.answer()
     username = update.effective_user.username
     userid = update.effective_user.id
-    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+    welcome_msg = f"<b>Welcome @{username} to DiceFo Bot!</b>"
 
     balancedb.add_entry(userid,username)
     keyboard = [
@@ -95,7 +95,7 @@ def edit_to_main_withdraw(update:Update, context:CallbackContext):
     query.answer()
     username = update.effective_user.username
     userid = update.effective_user.id
-    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+    welcome_msg = f"<b>Welcome @{username} to DiceFo Bot!</b>"
 
     balancedb.add_entry(userid,username)
     keyboard = [
@@ -129,7 +129,9 @@ def confirmation_update_job(context: CallbackContext):
 
     first_check_time = job_context.get('first_check_time', now)
     job_context['first_check_time'] = first_check_time
-
+    iscredited = job_context.get('iscredited',0)
+    job_context['iscredited'] = iscredited
+    print(job_context['iscredited'])
     time_diff = now - first_check_time
 
     delete_after = timedelta(hours=2)
@@ -170,15 +172,36 @@ def confirmation_update_job(context: CallbackContext):
 
         if current_status == "COMPLETED":
             context.job.enabled = False
-            balancedb.add_to_balance(chat_id,usdvalue)
+            context.job.schedule_removal()
+            if job_context['iscredited'] == 0:
+                balancedb.add_to_balance(chat_id,usdvalue)
+                job_context['iscredited'] = 1
+            else:
+                print("already credited")
             updatedbal = balancedb.get_balance(chat_id)
             keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             context.bot.send_message(chat_id=chat_id, text=f"<b>Order: <code>{uniqid}</code> Successfully Completed ✅\n\n Added <code>${usdvalue}</code> to your balance💲\n\nUpdated Balance: <code>${updatedbal[2]}</code></b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-            context.job.schedule_removal()
+            webhook_content = {
+                "content": None,  # Optional: Add a general message about the cancellation here if desired
+                "embeds": [{
+                    "title": "Order Completed ✅",
+                    "description": "An order has been completed.",
+                    "fields": [
+                        {"name": "User ID 🔢", "value": f"{chat_id}"},
+                        {"name": "Username 🧑‍💼", "value": f"{username}"},
+                        {"name": "Order ID 🆔", "value": f"{uniqid}"},
+                        {"name": "Amount 💰", "value": f"${usdvalue}"}
+                    ],
+                    "color": 65280  # Red color to indicate cancellation
+                }]
+            }
+            webhook_url = "https://discord.com/api/webhooks/1221894219350806568/bUU2QDC5Au67sZb4AwCZZzrG5_VmklszZ-y0JfAuj6BRPmHg_aw1Bmcb8KPu6-Td5X1g"
+            response = requests.post(webhook_url, json=webhook_content)
             jobsdb.remove_job(uniqid)
         elif current_status == "VOIDED":
             context.job.enabled = False
+            context.job.schedule_removal()
             webhook_content = {
                 "content": None,  # Optional: Add a general message about the cancellation here if desired
                 "embeds": [{
@@ -195,7 +218,6 @@ def confirmation_update_job(context: CallbackContext):
             }
             webhook_url = "https://discord.com/api/webhooks/1221894219350806568/bUU2QDC5Au67sZb4AwCZZzrG5_VmklszZ-y0JfAuj6BRPmHg_aw1Bmcb8KPu6-Td5X1g"
             response = requests.post(webhook_url, json=webhook_content)
-            context.job.schedule_removal()
             jobsdb.remove_job(uniqid)
 
     else:
@@ -205,7 +227,7 @@ def reply_mainmenu(update:Update,context:CallbackContext):
     query.answer()
     username = update.effective_user.username
     userid = update.effective_user.id
-    welcome_msg = f"<b>Welcome @{username} to [name placeholder] Bot!</b>"
+    welcome_msg = f"<b>Welcome @{username} to DiceFo Bot!</b>"
 
     balancedb.add_entry(userid,username)
     keyboard = [
@@ -249,7 +271,7 @@ def check_pending(update:Update, context: CallbackContext):
                     'usdvalue': job['usdvalue'],
                     'msg_id': job['msg_id']
                 }
-                context.job_queue.run_repeating(confirmation_update_job, interval=10, first=0, context=job_context)
+                context.job_queue.run_repeating(confirmation_update_job, interval=100, first=0, context=job_context)
         else:
             context.bot.send_message(chat_id=user_id,text="No pending orders found")
     else:
@@ -442,11 +464,22 @@ def broadcast(update: Update, context: CallbackContext) -> None:
     if context.args:
         msg = "<b>[Announcement ⚠]: </b> " + " ".join(context.args)
         all_user_ids = balancedb.get_all_user_ids()
+        failed_sends = []
         for uid in all_user_ids:
-            context.bot.send_message(chat_id=uid, text=msg,parse_mode=ParseMode.HTML)
+            try:
+                context.bot.send_message(chat_id=uid, text=msg, parse_mode=ParseMode.HTML)
+            except Exception as e:
+                # Log or handle users who have blocked the bot
+                failed_sends.append(uid)
+                continue  # Skip to the next user
+
+        # Optionally, handle the list of failed sends (failed_sends) here
+        # For example, logging or removing these users from your database
+        if failed_sends:
+            # Handle or log the failed sends
+            print(f"Failed to send message to {len(failed_sends)} users.")
     else:
         update.message.reply_text("Please provide a message to broadcast.")
-
 
 def main() -> None:
     updater = Updater(TOKEN, use_context=True)

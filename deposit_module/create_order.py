@@ -3,11 +3,11 @@ import requests
 def create_order(api_key, gateway, value):
     endpoint = 'https://dev.sellix.io/v1/payments'
     payload = {
-        "title": "License Key",
+        "title": "DiceFo Invoice",
         "value": value,
         "currency": "USD",
         "quantity": 1,
-        "email": "Y4OilG@pings.email",
+        "email": "outtea08@gmail.com",
         "gateway": gateway,
         "white_label": True,
         "confirmations" : 2

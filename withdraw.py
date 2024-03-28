@@ -55,7 +55,7 @@ def show_coins(update:Update,context:CallbackContext):
     query.answer()
     iswithdrawing.add_record(userid,username)
     msg = f"<b>Select a coin to process withdrawal💳</b>"
-    keyboard = [[InlineKeyboardButton("Litecoin",callback_data='withdraw_ltc')],[InlineKeyboardButton("Ethereum",callback_data='withdraw_eth')],[InlineKeyboardButton("◀️Back", callback_data='mainmenu_withdraw')]]
+    keyboard = [[InlineKeyboardButton("Litecoin",callback_data='withdraw_ltc')],[InlineKeyboardButton("Ethereum (Currently Disabled)",callback_data='asnaksjdnkjgasdj')],[InlineKeyboardButton("◀️Back", callback_data='mainmenu_withdraw')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
 

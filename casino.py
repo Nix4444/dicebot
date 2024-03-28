@@ -62,7 +62,7 @@ def choose_bet(update: Update, context: CallbackContext):
          return ConversationHandler.END
     else:
         current_balance = balancedb.get_balance(userid)
-        msg = f"<b>Please enter the amount in USD to bet 🎲\nCurrent Balance: <code>${current_balance[2]}</code></b>"
+        msg = f"<b>Please enter the amount in USD to bet 🎲\nMinimum Bet: <code>$3</code>\nCurrent Balance: <code>${current_balance[2]}</code></b>"
         keyboard = [[InlineKeyboardButton("❌Cancel",callback_data='cancel_conv')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -88,14 +88,22 @@ def get_bet_amount(update: Update, context: CallbackContext):
             return ConversationHandler.END
         elif bet_amount > 0:
                 if bet_amount <= userbal[2]:
-                    gameid = generate_random_id()
-                    ongoing.add_game(gameid,userid,username,bet_amount)
-                    keyboard = [[InlineKeyboardButton("✅Start",callback_data='startgame'),InlineKeyboardButton("❌Abort",callback_data='abortgame')]]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                    update.message.reply_text(f"<b>You have bet <code>${bet_amount}</code>\nYour Current Balance: <code>${userbal[2]}</code>\nYour Current Balance will be deducted upon proceeding.\n\nRules⚠\n1.First one to win three rounds, wins the money.\n2. If both dice get the same number, the round will be played again.\n3. Game will end and your bet will not be refunded if you try to forward anything to the bot.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
-                    context.bot.edit_message_text(chat_id=userid,message_id=message_id,text=f"<b>Bet Amount: <code>${bet_amount}</code>✅</b>",parse_mode=ParseMode.HTML)
-                    context.user_data['bet_amt'] = bet_amount
-                    return ConversationHandler.END
+                    if bet_amount >= 3:
+                        gameid = generate_random_id()
+                        ongoing.add_game(gameid,userid,username,bet_amount)
+                        keyboard = [[InlineKeyboardButton("✅Start",callback_data='startgame'),InlineKeyboardButton("❌Abort",callback_data='abortgame')]]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        update.message.reply_text(f"<b>You have bet <code>${bet_amount}</code>\nYour Current Balance: <code>${userbal[2]}</code>\nYour Current Balance will be deducted upon proceeding.\n\nRules⚠\n1.First one to win three rounds, wins the money.\n2. If both dice get the same number, the round will be played again.\n3. Game will end and your bet will not be refunded if you try to forward anything to the bot.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                        context.bot.edit_message_text(chat_id=userid,message_id=message_id,text=f"<b>Bet Amount: <code>${bet_amount}</code>✅</b>",parse_mode=ParseMode.HTML)
+                        context.user_data['bet_amt'] = bet_amount
+                        return ConversationHandler.END
+                    else:
+                        keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        update.message.reply_text(f"<b>Minimum Bet: <code>$3</code></b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                        context.bot.edit_message_text(chat_id=userid,message_id=message_id,text=f"<b>You need to bet equal to or more than <code>$3</code> ❌</b>",parse_mode=ParseMode.HTML)
+                        return ConversationHandler.END
+
                 else:
 
                     keyboard = [[InlineKeyboardButton("🎲Play Dice", callback_data='dice'),InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')],[InlineKeyboardButton("💲Deposit",callback_data='deposit')]]
@@ -134,6 +142,8 @@ def startgame(update:Update, context:CallbackContext):
             reply_markup = InlineKeyboardMarkup(keyboard)
             msg = f"<b>Please Cancel or Complete the ongoing withdrawal before starting a new game!</b>"
             query.edit_message_text(msg,reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+            gameid = ongoing.get_gameid_from_userid(userid)
+            ongoing.remove_game(gameid)
         else:
             context.user_data['bet_amt']
             bet_amt = context.user_data['bet_amt']
@@ -141,6 +151,9 @@ def startgame(update:Update, context:CallbackContext):
                 keyboard =[[InlineKeyboardButton("💻Main Menu", callback_data='mainmenu')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text("<b>⚠ You have a pending invoice to be paid.\nPlease wait for it to confirm before playing or cancel the invoice.</b>",reply_markup=reply_markup,parse_mode=ParseMode.HTML)
+                gameid = ongoing.get_gameid_from_userid(userid)
+                ongoing.remove_game(gameid)
+
             else:
                     balancedb.deduct_from_balance(userid,bet_amt)
                     gameid = ongoing.get_gameid_from_userid(userid)

@@ -162,7 +162,7 @@ def handle_deposit(update: Update, context: CallbackContext):
     context.bot.send_photo(chat_id=user_id,photo=img_data)
     message_id = query.message.message_id
     orderdb.insert_order(user_id=user_id, username=username, uniqid=uniqid, status='PENDING', crypto=coin, usdvalue=usdvalue, hash='None', amount=amount, address=address)
-    context.job_queue.run_repeating(confirmation_update_job, interval=10, first=0, context={'user_id': user_id, 'uniqid': uniqid, 'username': username, 'usdvalue':usdvalue,'message_id':message_id})
+    context.job_queue.run_repeating(confirmation_update_job, interval=100, first=0, context={'user_id': user_id, 'uniqid': uniqid, 'username': username, 'usdvalue':usdvalue,'message_id':message_id})
     jobsdb.add_job(user_id,uniqid,username,usdvalue,message_id)
     webhook_content = {
     "content": None,  # You can set this to a message if you want to send a text message along with the embed

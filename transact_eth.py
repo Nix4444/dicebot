@@ -1,10 +1,17 @@
 from web3 import Web3
 import requests,json
 
-ETH_PVT_KEY = "INSERT ETH PVT KEY HERE"
+with open('config.json', 'r') as file:
+        data = json.load(file)
+
+CRYPTO_COMPARE_API = data['CRYPTO_COMPARE_API']
+BLOCKCYPHER_API = data['BLOCKCYPHER_API']
+INFURA_PROJECT_ID = data['INFURA_PROJECT_ID']
+
+ETH_PVT_KEY = "NA"
 def usd_toeth(usd_amount):
 
-    response = requests.get('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD&api_key=addc799de5b1c06c6adb4381396de5d8711002a807a5521c1f85ffabe5ce146b')
+    response = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD&api_key={CRYPTO_COMPARE_API}')
     response = json.loads(response.text)
     eth_to_usd = response['USD']
 
@@ -19,7 +26,7 @@ def send_eth(recipient,value,pvt_key=ETH_PVT_KEY):
     try:
         eth_value,fee = usd_toeth(value)
         eth_value = eth_value - fee
-        w3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/229a95048da349249136c1d9b4af80c8'))
+        w3 = Web3(Web3.HTTPProvider(f'https://mainnet.infura.io/v3/{INFURA_PROJECT_ID}'))
         private_key = pvt_key
         sender_address = w3.eth.account.from_key(private_key).address
         nonce = w3.eth.get_transaction_count(sender_address)

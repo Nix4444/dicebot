@@ -4,6 +4,12 @@ from litecoinutils.keys import P2pkhAddress, PrivateKey, PublicKey
 from blockcypher import broadcast_signed_transaction
 from blockcypher import make_tx_signatures
 import requests,json
+with open('config.json', 'r') as file:
+        data = json.load(file)
+
+CRYPTO_COMPARE_API = data['CRYPTO_COMPARE_API']
+BLOCKCYPHER_API = data['BLOCKCYPHER_API']
+
 def get_input_address(private_key):
     setup('mainnet')
     privkey = PrivateKey.from_wif(private_key)
@@ -11,10 +17,10 @@ def get_input_address(private_key):
     publickey = pub_key.to_hex(compressed=True)
     address = pub_key.get_address(compressed=True).to_string()
     return address,publickey
-LTC_PVT_KEY = "INSERT PRIVATE KEY HERE"
+LTC_PVT_KEY = "T8UynVrBuycH2fSkcAjPWv1B5w4N9tx2EEF58pFnGe8FTwbJLgJS"
 def usd_to_ltc_to_litoshis(usd_amount):
 
-    response = requests.get('https://min-api.cryptocompare.com/data/price?fsym=LTC&tsyms=USD&api_key=addc799de5b1c06c6adb4381396de5d8711002a807a5521c1f85ffabe5ce146b')
+    response = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym=LTC&tsyms=USD&api_key={CRYPTO_COMPARE_API}')
     response = json.loads(response.text)
     ltc_to_usd_rate = response['USD']
 
@@ -25,12 +31,17 @@ def usd_to_ltc_to_litoshis(usd_amount):
 
     return int(litoshis_amount)
 
-def create_broadcast(output, value, privkey=LTC_PVT_KEY, apikey='eb56febc793143d082ec451951874961'):
+def create_broadcast(output, value, privkey=LTC_PVT_KEY, apikey=BLOCKCYPHER_API):
     try:
         inputaddy, pubkey = get_input_address(privkey)
         inputs = [{'address': inputaddy}]
         outputs = [{'address': output, 'value': value}]
         unsigned_tx = create_unsigned_tx(inputs=inputs, outputs=outputs, coin_symbol='ltc', api_key=apikey)
+
+        # Check if there are errors in the unsigned_tx and raise an exception if so
+        if 'errors' in unsigned_tx:
+            error_messages = '; '.join([error['error'] for error in unsigned_tx['errors']])
+            raise Exception(f"Error creating unsigned transaction: {error_messages}")
 
         # Initialize empty lists for private and public keys
         privkey_list = []
@@ -39,7 +50,6 @@ def create_broadcast(output, value, privkey=LTC_PVT_KEY, apikey='eb56febc793143d
         # Determine the number of elements in 'tosign'
         num_of_tosign_elements = len(unsigned_tx['tosign'])
 
-
         # Append the private key and public key 'num_of_tosign_elements' times
         for _ in range(num_of_tosign_elements):
             privkey_list.append(privkey)
@@ -47,10 +57,11 @@ def create_broadcast(output, value, privkey=LTC_PVT_KEY, apikey='eb56febc793143d
 
         tx_signatures = make_tx_signatures(txs_to_sign=unsigned_tx['tosign'], privkey_list=privkey_list, pubkey_list=pubkey_list)
 
-
         # Broadcast the signed transaction
         tx_data = broadcast_signed_transaction(unsigned_tx=unsigned_tx, signatures=tx_signatures, pubkeys=pubkey_list, api_key=apikey, coin_symbol='ltc')
         hash = tx_data['tx']['hash']
         return hash
     except AssertionError:
+        return False
+    except Exception as e:
         return False
