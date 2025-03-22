@@ -1,7 +1,7 @@
 {
-    "TOKEN": "6736254139:AAE2blW8rcSYt-vHTOdso_zSbaBMHEcAPIs",
-    "SELLIX_API": "j4dLJLxOVzH21fM4sZ4gHev5YL65tlZAUJSyUon1djeZGJHtvxA2QWt1isl4xzaH",
-    "CRYPTO_COMPARE_API": "3cf2eb9e19bba1e66d5ab9179a15b0c1194c7184fb04aff3efcbb8fdced6e53b",
-    "BLOCKCYPHER_API": "ac527cacc5414aaaaa70a1070a971728",
-    "INFURA_PROJECT_ID": "e7b06c6b42e5436dba6b31cc177153a8"
+    "TOKEN": "",
+    "SELLIX_API": "",
+    "CRYPTO_COMPARE_API": "",
+    "BLOCKCYPHER_API": "",
+    "INFURA_PROJECT_ID": ""
 }
