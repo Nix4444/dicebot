@@ -17,7 +17,7 @@ def get_input_address(private_key):
     publickey = pub_key.to_hex(compressed=True)
     address = pub_key.get_address(compressed=True).to_string()
     return address,publickey
-LTC_PVT_KEY = "T8UynVrBuycH2fSkcAjPWv1B5w4N9tx2EEF58pFnGe8FTwbJLgJS"
+LTC_PVT_KEY = ""
 def usd_to_ltc_to_litoshis(usd_amount):
 
     response = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym=LTC&tsyms=USD&api_key={CRYPTO_COMPARE_API}')
